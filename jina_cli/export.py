@@ -65,12 +65,13 @@ def _export_parser_args(parser_fn, type_as_str: bool = False, **kwargs):
     port_attr = ('help', 'choices', 'default', 'required', 'option_strings', 'dest')
     parser = parser_fn(**kwargs)
     parser2 = parser_fn(**kwargs)
-    random_dest = set()
-    for a, b in zip(parser._actions, parser2._actions):
-        if a.default != b.default:
-            random_dest.add(a.dest)
+    random_dest = {
+        a.dest
+        for a, b in zip(parser._actions, parser2._actions)
+        if a.default != b.default
+    }
     for a in parser._actions:
-        if isinstance(
+        if not isinstance(
             a,
             (
                 _StoreAction,
@@ -80,32 +81,31 @@ def _export_parser_args(parser_fn, type_as_str: bool = False, **kwargs):
                 CastHostAction,
             ),
         ):
-            if not _SHOW_ALL_ARGS and a.help == argparse.SUPPRESS:
-                continue
-            ddd = {p: getattr(a, p) for p in port_attr}
-            if isinstance(a, _StoreTrueAction):
-                ddd['type'] = bool
-            elif isinstance(a, KVAppendAction):
-                ddd['type'] = dict
-            elif isinstance(a, CastToIntAction):
-                ddd['type'] = int
-            elif isinstance(a, CastHostAction):
-                ddd['type'] = str
-            else:
-                ddd['type'] = a.type
-            if ddd['choices']:
-                ddd['choices'] = [
-                    str(k) if isinstance(k, BetterEnum) else k for k in ddd['choices']
-                ]
-                ddd['type'] = str
-            if isinstance(ddd['default'], BetterEnum):
-                ddd['default'] = str(ddd['default'])
-                ddd['type'] = str
-            if ddd['type'] == str and (a.nargs == '*' or a.nargs == '+'):
-                ddd['type'] = List[str]
-        else:
             continue
 
+        if not _SHOW_ALL_ARGS and a.help == argparse.SUPPRESS:
+            continue
+        ddd = {p: getattr(a, p) for p in port_attr}
+        if isinstance(a, _StoreTrueAction):
+            ddd['type'] = bool
+        elif isinstance(a, KVAppendAction):
+            ddd['type'] = dict
+        elif isinstance(a, CastToIntAction):
+            ddd['type'] = int
+        elif isinstance(a, CastHostAction):
+            ddd['type'] = str
+        else:
+            ddd['type'] = a.type
+        if ddd['choices']:
+            ddd['choices'] = [
+                str(k) if isinstance(k, BetterEnum) else k for k in ddd['choices']
+            ]
+            ddd['type'] = str
+        if isinstance(ddd['default'], BetterEnum):
+            ddd['default'] = str(ddd['default'])
+            ddd['type'] = str
+        if ddd['type'] == str and a.nargs in ['*', '+']:
+            ddd['type'] = List[str]
         if a.dest in random_dest:
             ddd['default_random'] = True
             from jina.helper import random_identity, random_port

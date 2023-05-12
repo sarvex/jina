@@ -15,10 +15,7 @@ def test_pod_instantiate_start_same_context():
 def test_pod_instantiate_start_different_context():
     arg = _generate_pod_args()
     pod_args = [arg, arg]
-    pods = []
-    for args in pod_args:
-        pods.append(PodFactory.build_pod(args))
-
+    pods = [PodFactory.build_pod(args) for args in pod_args]
     for pod in pods:
         with pod:
             pass

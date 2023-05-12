@@ -77,11 +77,8 @@ NON_EXISTING_CONDA_PACKAGES = [
     'opentelemetry-exporter-prometheus',
 ]
 extra_deps = get_extra_requires('extra-requirements.txt')
-reqs = {}
+reqs = {'core': extra_deps['core']}
 
-# core < perf < standard
-# standard < demo
-reqs['core'] = extra_deps['core']
 reqs['perf'] = reqs['core'].union(extra_deps['perf'])
 reqs['standard'] = reqs['perf'].union(extra_deps['standard'])
 
@@ -89,10 +86,7 @@ for key in list(reqs.keys()):
     reqs[key] = sorted(list(reqs[key]))
     ids_to_remove = []
     for i, v in enumerate(reqs[key]):
-        remove = False
-        for non_existing in NON_EXISTING_CONDA_PACKAGES:
-            if non_existing in v:
-                remove = True
+        remove = any(non_existing in v for non_existing in NON_EXISTING_CONDA_PACKAGES)
         if remove:
             ids_to_remove.append(i)
 

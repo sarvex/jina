@@ -292,16 +292,14 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
 
         instrumenting_module_name = _runtime_args.get('name', self.__class__.__name__)
 
-        args_tracer_provider = _runtime_args.get('tracer_provider', None)
-        if args_tracer_provider:
+        if args_tracer_provider := _runtime_args.get('tracer_provider', None):
             self.tracer_provider = args_tracer_provider
             self.tracer = self.tracer_provider.get_tracer(instrumenting_module_name)
         else:
             self.tracer_provider = None
             self.tracer = None
 
-        args_meter_provider = _runtime_args.get('meter_provider', None)
-        if args_meter_provider:
+        if args_meter_provider := _runtime_args.get('meter_provider', None):
             self.meter_provider = args_meter_provider
             self.meter = self.meter_provider.get_meter(instrumenting_module_name)
         else:
@@ -315,47 +313,45 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
 
         :return: Returns the requests corresponding to the specific Executor instance class
         """
-        if hasattr(self, '_requests'):
-            return self._requests
-        else:
+        if not hasattr(self, '_requests'):
             if not hasattr(self, 'requests_by_class'):
                 self.requests_by_class = {}
             if self.__class__.__name__ not in self.requests_by_class:
                 self.requests_by_class[self.__class__.__name__] = {}
             # we need to copy so that different instances with different (requests) in input do not disturb one another
             self._requests = copy.copy(self.requests_by_class[self.__class__.__name__])
-            return self._requests
+        return self._requests
 
     def _add_requests(self, _requests: Optional[Dict]):
-        if _requests:
-            func_names = {f.fn.__name__: e for e, f in self.requests.items()}
-            for endpoint, func in _requests.items():
+        if not _requests:
+            return
+        func_names = {f.fn.__name__: e for e, f in self.requests.items()}
+        for endpoint, func in _requests.items():
                 # the following line must be `getattr(self.__class__, func)` NOT `getattr(self, func)`
                 # this to ensure we always have `_func` as unbound method
-                if func in func_names:
-                    if func_names[func] in self.requests:
-                        del self.requests[func_names[func]]
+            if func in func_names and func_names[func] in self.requests:
+                del self.requests[func_names[func]]
 
-                _func = getattr(self.__class__, func)
-                if callable(_func):
-                    # the target function is not decorated with `@requests` yet
-                    self.requests[
-                        endpoint
-                    ] = _FunctionWithSchema.get_function_with_schema(_func)
-                elif typename(_func) == 'jina.executors.decorators.FunctionMapper':
-                    # the target function is already decorated with `@requests`, need unwrap with `.fn`
-                    self.requests[
-                        endpoint
-                    ] = _FunctionWithSchema.get_function_with_schema(_func.fn)
-                else:
-                    raise TypeError(
-                        f'expect {typename(self)}.{func} to be a function, but receiving {typename(_func)}'
-                    )
+            _func = getattr(self.__class__, func)
+            if callable(_func):
+                # the target function is not decorated with `@requests` yet
+                self.requests[
+                    endpoint
+                ] = _FunctionWithSchema.get_function_with_schema(_func)
+            elif typename(_func) == 'jina.executors.decorators.FunctionMapper':
+                # the target function is already decorated with `@requests`, need unwrap with `.fn`
+                self.requests[
+                    endpoint
+                ] = _FunctionWithSchema.get_function_with_schema(_func.fn)
+            else:
+                raise TypeError(
+                    f'expect {typename(self)}.{func} to be a function, but receiving {typename(_func)}'
+                )
 
     def _add_dynamic_batching(self, _dynamic_batching: Optional[Dict]):
         if _dynamic_batching:
             self.dynamic_batching = getattr(self, 'dynamic_batching', {})
-            self.dynamic_batching.update(_dynamic_batching)
+            self.dynamic_batching |= _dynamic_batching
 
     def _add_metas(self, _metas: Optional[Dict]):
         from jina.serve.executors.metas import get_default_metas
@@ -369,7 +365,7 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
         target = SimpleNamespace()
         # set self values filtered by those non-exist, and non-expandable
         for k, v in tmp.items():
-            if k == 'workspace' and not (v is None or v == ''):
+            if k == 'workspace' and v is not None and v != '':
                 warnings.warn(
                     'Setting `workspace` via `metas.workspace` is deprecated. '
                     'Instead, use `f.add(..., workspace=...)` when defining a a Flow in Python; '
@@ -378,13 +374,14 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
                     category=DeprecationWarning,
                 )
             if not hasattr(target, k):
-                if isinstance(v, str):
-                    if not env_var_regex.findall(v):
-                        setattr(target, k, v)
-                    else:
-                        unresolved_attr = True
-                else:
+                if (
+                    isinstance(v, str)
+                    and not env_var_regex.findall(v)
+                    or not isinstance(v, str)
+                ):
                     setattr(target, k, v)
+                else:
+                    unresolved_attr = True
             elif type(getattr(target, k)) == type(v):
                 setattr(target, k, v)
 
@@ -396,14 +393,14 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
             for k, v in new_metas.items():
                 if not hasattr(target, k):
                     if isinstance(v, str):
-                        if not (
+                        if (
                             env_var_regex.findall(v) or internal_var_regex.findall(v)
                         ):
-                            setattr(target, k, v)
-                        else:
                             raise ValueError(
                                 f'{k}={v} is not substitutable or badly referred'
                             )
+                        else:
+                            setattr(target, k, v)
                     else:
                         setattr(target, k, v)
         # `name` is important as it serves as an identifier of the executor
@@ -454,19 +451,18 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
         func, input_doc, output_doc = self.requests[req_endpoint]
 
         async def exec_func(
-            summary, histogram, histogram_metric_labels, tracing_context
-        ):
+                summary, histogram, histogram_metric_labels, tracing_context
+            ):
             with MetricsTimer(summary, histogram, histogram_metric_labels):
                 if iscoroutinefunction(func):
                     return await func(self, tracing_context=tracing_context, **kwargs)
-                else:
-                    async with self._lock:
-                        return await get_or_reuse_loop().run_in_executor(
-                            None,
-                            functools.partial(
-                                func, self, tracing_context=tracing_context, **kwargs
-                            ),
-                        )
+                async with self._lock:
+                    return await get_or_reuse_loop().run_in_executor(
+                        None,
+                        functools.partial(
+                            func, self, tracing_context=tracing_context, **kwargs
+                        ),
+                    )
 
         runtime_name = (
             self.runtime_args.name if hasattr(self.runtime_args, 'name') else None
@@ -517,13 +513,12 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
 
         :return: returns the workspace of the current shard of this Executor.
         """
-        workspace = (
+        if workspace := (
             getattr(self.runtime_args, 'workspace', None)
             or getattr(self.metas, 'workspace')
             or self._init_workspace
             or __cache_path__
-        )
-        if workspace:
+        ):
             complete_workspace = os.path.join(workspace, self.metas.name)
             shard_id = getattr(
                 self.runtime_args,
@@ -808,8 +803,7 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
 
         """
         warnings.warn(
-            f'Executor.serve() is no more supported and will be deprecated soon. Use Deployment to serve an Executor instead: '
-            f'https://docs.jina.ai/concepts/executor/serve/',
+            'Executor.serve() is no more supported and will be deprecated soon. Use Deployment to serve an Executor instead: https://docs.jina.ai/concepts/executor/serve/',
             DeprecationWarning,
         )
         from jina.orchestrate.deployments import Deployment
@@ -865,8 +859,7 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
         :param kwargs: other kwargs accepted by the Flow, full list can be found `here <https://docs.jina.ai/api/jina.orchestrate.flow.base/>`
         """
         warnings.warn(
-            f'Executor.to_kubernetes_yaml() is no more supported and will be deprecated soon. Use Deployment to export kubernetes YAML files: '
-            f'https://docs.jina.ai/concepts/executor/serve/#serve-via-kubernetes',
+            'Executor.to_kubernetes_yaml() is no more supported and will be deprecated soon. Use Deployment to export kubernetes YAML files: https://docs.jina.ai/concepts/executor/serve/#serve-via-kubernetes',
             DeprecationWarning,
         )
         from jina.orchestrate.flow.base import Flow
@@ -914,8 +907,7 @@ class BaseExecutor(JAMLCompatible, metaclass=ExecutorType):
         """
 
         warnings.warn(
-            f'Executor.to_docker_compose_yaml() is no more supported and will be deprecated soon. Use Deployment to export docker compose YAML files: '
-            f'https://docs.jina.ai/concepts/executor/serve/#serve-via-docker-compose',
+            'Executor.to_docker_compose_yaml() is no more supported and will be deprecated soon. Use Deployment to export docker compose YAML files: https://docs.jina.ai/concepts/executor/serve/#serve-via-docker-compose',
             DeprecationWarning,
         )
 

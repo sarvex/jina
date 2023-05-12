@@ -17,8 +17,7 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 @pytest.fixture(scope='function')
 def test_workspace(tmpdir):
     os.environ['JINA_TEST_JOINT'] = str(tmpdir)
-    workspace_path = os.environ['JINA_TEST_JOINT']
-    yield workspace_path
+    yield os.environ['JINA_TEST_JOINT']
     del os.environ['JINA_TEST_JOINT']
 
 
@@ -82,13 +81,14 @@ def test_yaml_expand4():
 
 
 def test_attr_dict():
+
     class AttrDict:
         pass
 
     a = AttrDict()
     a.__dict__['sda'] = 1
     assert a.sda == 1
-    a.__dict__['components'] = list()
+    a.__dict__['components'] = []
     assert isinstance(a.components, list)
 
 
@@ -196,7 +196,7 @@ def test_load_gateway_external_success(yaml_file, gateway_name):
 
 def test_load_http_gateway_success():
     gateway: HTTPGateway = HTTPGateway.load_config(
-        f'yaml/test-http-gateway.yml', runtime_args={'port': [12345]}
+        'yaml/test-http-gateway.yml', runtime_args={'port': [12345]}
     )
     with gateway:
         assert isinstance(gateway, HTTPGateway)

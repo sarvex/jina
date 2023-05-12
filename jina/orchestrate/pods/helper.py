@@ -15,8 +15,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def _get_event(obj) -> multiprocessing.Event:
-    if isinstance(obj, multiprocessing.Process) or isinstance(
-            obj, multiprocessing.context.ForkProcess
+    if isinstance(
+        obj, (multiprocessing.Process, multiprocessing.context.ForkProcess)
     ):
         return multiprocessing.Event()
     elif isinstance(obj, multiprocessing.context.SpawnProcess):

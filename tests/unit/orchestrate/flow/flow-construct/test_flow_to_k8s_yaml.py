@@ -597,14 +597,13 @@ def test_flow_to_k8s_yaml_external_pod(tmpdir, has_external):
         == '{"executor0": ["external_executor"], "start-gateway": ["executor0"], "external_executor": ["end-gateway"]}'
     )
 
+    assert '--deployments-addresses' in gateway_args
     if has_external:
-        assert '--deployments-addresses' in gateway_args
         assert (
             gateway_args[gateway_args.index('--deployments-addresses') + 1]
             == '{"executor0": ["grpc://executor0.test-flow-ns.svc:8080"], "external_executor": ["grpc://1.2.3.4:9090"]}'
         )
     else:
-        assert '--deployments-addresses' in gateway_args
         assert (
             gateway_args[gateway_args.index('--deployments-addresses') + 1]
             == '{"executor0": ["grpc://executor0.test-flow-ns.svc:8080"], "external_executor": ["grpc://external-executor.test-flow-ns.svc:8080"]}'
@@ -619,12 +618,7 @@ def test_raise_exception_invalid_executor(tmpdir):
         f.to_kubernetes_yaml(str(tmpdir))
 
 
-@pytest.mark.parametrize(
-    'uses',
-    [
-        f'jinaai+sandbox://jina-ai/DummyHubExecutor',
-    ],
-)
+@pytest.mark.parametrize('uses', ['jinaai+sandbox://jina-ai/DummyHubExecutor'])
 def test_flow_to_k8s_yaml_sandbox(tmpdir, uses):
 
     flow = Flow(name='test-flow', port=8080).add(uses=uses)

@@ -197,11 +197,13 @@ def test_stream_individual_executor_simple():
                 doc.text += f' Second(parameters={str(parameters)})'
 
     with Flow().config_gateway(uses=MyGateway, protocol='http').add(uses=FirstExec, name='executor0').add(
-            uses=SecondExec, name='executor1') as flow:
+                uses=SecondExec, name='executor1') as flow:
         import requests
         r = requests.get(f'http://localhost:{flow.port}/endpoint?text=meow')
-        assert r.json()['result'] == [f'meow Second(parameters={str(PARAMETERS)})',
-                                      f'MEOW Second(parameters={str(PARAMETERS)})']
+        assert r.json()['result'] == [
+            f'meow Second(parameters={PARAMETERS})',
+            f'MEOW Second(parameters={PARAMETERS})',
+        ]
 
 
 @pytest.mark.parametrize(
@@ -224,6 +226,8 @@ def test_stream_individual_executor_multirequest(n_replicas: int, n_shards: int)
 
     PARAMETERS = {'dog': 'woof'}
 
+
+
     class MyGateway(FastAPIBaseGateway):
         @property
         def app(self):
@@ -236,10 +240,11 @@ def test_stream_individual_executor_multirequest(n_replicas: int, n_shards: int)
                 docs = await self.executor['executor1'].post(on='/', inputs=DocumentArray(
                     [Document(text=f'{text} {i}') for i in range(N_DOCS)]), parameters=PARAMETERS,
                                                              request_size=BATCH_SIZE)
-                pids = set([doc.tags['pid'] for doc in docs])
+                pids = {doc.tags['pid'] for doc in docs}
                 return {'result': docs.texts, 'pids': pids}
 
             return app
+
 
     class FirstExec(Executor):
         @requests
@@ -255,12 +260,14 @@ def test_stream_individual_executor_multirequest(n_replicas: int, n_shards: int)
                 doc.tags['pid'] = os.getpid()
 
     with Flow().config_gateway(uses=MyGateway, protocol='http').add(uses=FirstExec, name='executor0').add(
-            uses=SecondExec, name='executor1', replicas=n_replicas, shards=n_shards
-    ) as flow:
+                uses=SecondExec, name='executor1', replicas=n_replicas, shards=n_shards
+        ) as flow:
         import requests
         r = requests.get(f'http://localhost:{flow.port}/endpoint?text=meow')
 
         # Make sure the results are correct
-        assert set(r.json()['result']) == set([f'meow {i} Second(parameters={str(PARAMETERS)})' for i in range(N_DOCS)])
+        assert set(r.json()['result']) == {
+            f'meow {i} Second(parameters={PARAMETERS})' for i in range(N_DOCS)
+        }
         # Make sure we are sending to all replicas and shards
         assert len(r.json()['pids']) == n_replicas * n_shards

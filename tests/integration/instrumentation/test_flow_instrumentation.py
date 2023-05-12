@@ -50,7 +50,7 @@ def test_gateway_instrumentation(
     with f:
         from docarray import DocumentArray
 
-        f.post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(), continue_on_error=True)
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
         time.sleep(8)
@@ -100,21 +100,21 @@ def test_multiprotocol_gateway_instrumentation(
             tracing=True,
             traces_exporter_host='http://localhost',
             traces_exporter_port=otlp_receiver_port,
-        ).post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        ).post('/search', DocumentArray.empty(), continue_on_error=True)
         Client(
             protocol='http',
             port=http_port,
             tracing=True,
             traces_exporter_host='http://localhost',
             traces_exporter_port=otlp_receiver_port,
-        ).post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        ).post('/search', DocumentArray.empty(), continue_on_error=True)
         Client(
             protocol='websocket',
             port=websocket_port,
             tracing=True,
             traces_exporter_host='http://localhost',
             traces_exporter_port=otlp_receiver_port,
-        ).post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        ).post('/search', DocumentArray.empty(), continue_on_error=True)
 
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
@@ -149,7 +149,7 @@ def test_executor_instrumentation(jaeger_port, otlp_collector, otlp_receiver_por
     with f:
         from docarray import DocumentArray
 
-        f.post(f'/search', DocumentArray.empty(2), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(2), continue_on_error=True)
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
         time.sleep(8)
@@ -179,7 +179,7 @@ def test_head_instrumentation(jaeger_port, otlp_collector, otlp_receiver_port):
     with f:
         from docarray import DocumentArray
 
-        f.post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(), continue_on_error=True)
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
         time.sleep(8)
@@ -231,8 +231,8 @@ def test_flow_metrics(
     with f:
         from docarray import DocumentArray
 
-        f.post(f'/search', DocumentArray.empty(2), continue_on_error=True)
-        f.post(f'/search', DocumentArray.empty(2), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(2), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(2), continue_on_error=True)
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
         time.sleep(8)

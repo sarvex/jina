@@ -62,15 +62,15 @@ def _prettyprint_help(d, also_in=None):
     else:
         availables = '  '.join(
             colored(v, attrs='underline')
-            for v in (set(h['usage'] for h in also_in) if also_in else {d['usage']})
+            for v in (
+                {h['usage'] for h in also_in} if also_in else {d['usage']}
+            )
         )
         option_str = '  '.join(colored(v, attrs='bold') for v in d['option_strings'])
         if option_str:
             option_str = f'as {option_str}'
 
-        table = {}
-        table['Type'] = d['type']
-        table['Required'] = d['required']
+        table = {'Type': d['type'], 'Required': d['required']}
         if d['choices']:
             table['Choices'] = ' | '.join(d['choices'])
         if not d['default_random'] and d['default'] is not None:
@@ -81,7 +81,7 @@ def _prettyprint_help(d, also_in=None):
             )
 
         table_str = '\n    '.join(
-            f'{k + ": " + colored(v, attrs="bold")}' for k, v in table.items()
+            f'{f"{k}: " + colored(v, attrs="bold")}' for k, v in table.items()
         )
 
         lb = '\033[F'
@@ -117,7 +117,7 @@ def lookup_and_print(query: str):
         helps = kw2info[nkw2kw[query]]  # type: list
         if len(helps) == 1:
             _prettyprint_help(helps[0])
-        elif len(helps) > 1 and len(set(h['help'] for h in helps)) == 1:
+        elif len(helps) > 1 and len({h['help'] for h in helps}) == 1:
             _prettyprint_help(helps[0], also_in=helps)
         elif len(helps) > 1:
             from collections import defaultdict

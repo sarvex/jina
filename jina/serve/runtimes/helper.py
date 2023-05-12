@@ -39,14 +39,11 @@ def _is_param_for_specific_executor(key_name: str) -> bool:
     :param key_name: key name of the param
     :return: return True if key_name is for specific Executor, False otherwise
     """
-    if _SPECIFIC_EXECUTOR_SEPARATOR in key_name:
-        if key_name.startswith(_SPECIFIC_EXECUTOR_SEPARATOR) or key_name.endswith(
-            _SPECIFIC_EXECUTOR_SEPARATOR
-        ):
-            return False
-        return True
-    else:
+    if _SPECIFIC_EXECUTOR_SEPARATOR not in key_name:
         return False
+    return not key_name.startswith(
+        _SPECIFIC_EXECUTOR_SEPARATOR
+    ) and not key_name.endswith(_SPECIFIC_EXECUTOR_SEPARATOR)
 
 
 def _parse_specific_params(parameters: Dict, executor_name: str):
@@ -70,8 +67,7 @@ def _parse_specific_params(parameters: Dict, executor_name: str):
 
             del parsed_params[key]
 
-    specific_parameters = parameters.get(executor_name, None)
-    if specific_parameters:
+    if specific_parameters := parameters.get(executor_name, None):
         parsed_params.update(**specific_parameters)
 
     return parsed_params

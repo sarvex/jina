@@ -179,15 +179,15 @@ class BaseServer(MonitoringMixin, InstrumentationMixin):
         from jina.serve.runtimes.servers.grpc import GRPCServer
         from jina.serve.runtimes.servers.http import FastAPIBaseServer
 
-        if (
-            protocol is None
-            or protocol == GatewayProtocolType.GRPC
-            or protocol == 'grpc'
-        ):
-            res = GRPCServer.is_ready(ctrl_address)
-        else:
-            res = FastAPIBaseServer.is_ready(ctrl_address)
-        return res
+        return (
+            GRPCServer.is_ready(ctrl_address)
+            if (
+                protocol is None
+                or protocol == GatewayProtocolType.GRPC
+                or protocol == 'grpc'
+            )
+            else FastAPIBaseServer.is_ready(ctrl_address)
+        )
 
     @staticmethod
     async def async_is_ready(
@@ -208,15 +208,15 @@ class BaseServer(MonitoringMixin, InstrumentationMixin):
         from jina.serve.runtimes.servers.grpc import GRPCServer
         from jina.serve.runtimes.servers.http import FastAPIBaseServer
 
-        if (
-            protocol is None
-            or protocol == GatewayProtocolType.GRPC
-            or protocol == 'grpc'
-        ):
-            res = await GRPCServer.async_is_ready(ctrl_address)
-        else:
-            res = await FastAPIBaseServer.async_is_ready(ctrl_address)
-        return res
+        return (
+            await GRPCServer.async_is_ready(ctrl_address)
+            if (
+                protocol is None
+                or protocol == GatewayProtocolType.GRPC
+                or protocol == 'grpc'
+            )
+            else await FastAPIBaseServer.async_is_ready(ctrl_address)
+        )
 
     @classmethod
     def wait_for_ready_or_shutdown(

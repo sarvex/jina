@@ -8,7 +8,7 @@ from jina.serve.runtimes.gateway.models import (
 
 
 def test_schema_invocation():
-    for k, v in vars(PROTO_TO_PYDANTIC_MODELS).items():
+    for v in vars(PROTO_TO_PYDANTIC_MODELS).values():
         if isinstance(v, pydantic.BaseModel):
             v.schema()
             v.schema_json()

@@ -87,11 +87,14 @@ def test_client_behaviour(flow_with_exception_request, mocker):
 def _get_grpc_service_config_json(
     options: List[Tuple[str, Any]]
 ) -> Optional[Dict[str, Any]]:
-    for tup in options:
-        if tup[0] == 'grpc.service_config':
-            return json.loads(tup[1])
-
-    return None
+    return next(
+        (
+            json.loads(tup[1])
+            for tup in options
+            if tup[0] == 'grpc.service_config'
+        ),
+        None,
+    )
 
 
 @pytest.mark.parametrize('max_attempts', [-1, 1, 2])
@@ -111,11 +114,11 @@ def test_client_grpc_options(max_attempts, grpc_options):
     assert len(options) >= len(default_options)
     if grpc_options and max_attempts <= 1:
         assert len(default_options) + 1 == len(options)
-    elif grpc_options and max_attempts > 1:
+    elif grpc_options:
         assert len(default_options) + 3 == len(options)
-    elif not grpc_options and max_attempts <= 1:
+    elif max_attempts <= 1:
         assert len(options) == len(default_options)
-    elif not grpc_options and max_attempts > 1:
+    else:
         assert len(default_options) + 2 == len(options)
 
     if max_attempts <= 1:

@@ -103,9 +103,7 @@ def _set_nofile(nofile_atleast=4096):
 
     if soft < nofile_atleast:
         soft = nofile_atleast
-        if hard < soft:
-            hard = soft
-
+        hard = max(hard, soft)
         try:
             res.setrlimit(res.RLIMIT_NOFILE, (soft, hard))
         except (ValueError, res.error):

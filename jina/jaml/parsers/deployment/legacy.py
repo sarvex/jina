@@ -42,8 +42,7 @@ class DeploymentLegacyParser(BaseLegacyParser):
         :param data: versioned deployment object
         :return: the dictionary given a versioned deployment object
         """
-        r = {}
-        r['with'] = {}
+        r = {'with': {}}
         parser = set_deployment_parser()
         non_default_kw = ArgNamespace.get_non_defaults_args(data.args, parser)
         for t in _get_taboo(parser):

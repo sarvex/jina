@@ -26,7 +26,7 @@ def metrics_setup() -> Tuple[InMemoryMetricReader, MeterProvider]:
 
 def test_get_labels():
     a: _NetworkingHistograms = _NetworkingHistograms()
-    assert a._get_labels() == None
+    assert a._get_labels() is None
 
     HIST_LABELS = {
         'a': 1,
@@ -39,7 +39,7 @@ def test_get_labels():
         'b': 3,
         'c': 4,
     }
-    assert a._get_labels(ADD_LABELS) == {**HIST_LABELS, **ADD_LABELS}
+    assert a._get_labels(ADD_LABELS) == HIST_LABELS | ADD_LABELS
 
 
 def test_recording_methods(metrics_setup: Tuple[InMemoryMetricReader, Meter]):

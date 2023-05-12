@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 with open("./docs/_versions.json") as f:
     versions: List[dict] = json.load(f)
-    element = {k: v for k, v in args._get_kwargs()}
+    element = dict(args._get_kwargs())
     if element != versions[0]:
         versions.insert(0, element)
 

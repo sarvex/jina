@@ -152,14 +152,12 @@ def test_topology_graph_build_bifurcation(bifurcation_graph_dict, conditions):
         len(graph.origin_nodes[node_names_list.index('deployment0')].outgoing_nodes)
         == 2
     )
-    assert set(
-        [
-            node.name
-            for node in graph.origin_nodes[
-                node_names_list.index('deployment0')
-            ].outgoing_nodes
-        ]
-    ) == {'deployment1', 'deployment2'}
+    assert {
+        node.name
+        for node in graph.origin_nodes[
+            node_names_list.index('deployment0')
+        ].outgoing_nodes
+    } == {'deployment1', 'deployment2'}
 
     node_deployment0 = graph.origin_nodes[node_names_list.index('deployment0')]
     assert not node_deployment0.floating
@@ -203,14 +201,12 @@ def test_topology_graph_build_bifurcation(bifurcation_graph_dict, conditions):
     assert node_deployment4.number_of_parts == 1
     assert len(node_deployment4.outgoing_nodes) == 1
     assert not node_deployment4.floating
-    assert set(
-        [
-            node.name
-            for node in graph.origin_nodes[
-                node_names_list.index('deployment4')
-            ].outgoing_nodes
-        ]
-    ) == {'deployment5'}
+    assert {
+        node.name
+        for node in graph.origin_nodes[
+            node_names_list.index('deployment4')
+        ].outgoing_nodes
+    } == {'deployment5'}
 
     node_deployment5 = node_deployment4.outgoing_nodes[0]
     assert node_deployment5.name == 'deployment5'
@@ -224,14 +220,14 @@ def test_topology_graph_build_bifurcation(bifurcation_graph_dict, conditions):
     assert len(node_deployment6.outgoing_nodes) == 0
     assert node_deployment6.number_of_parts == 1
     assert node_deployment6.floating
-    assert set([node.name for node in node_deployment6.outgoing_nodes]) == set()
+    assert not {node.name for node in node_deployment6.outgoing_nodes}
 
 
 def test_topology_graph_build_merge_in_gateway(
     merge_graph_dict_directly_merge_in_gateway,
 ):
     graph = TopologyGraph(merge_graph_dict_directly_merge_in_gateway)
-    assert set([node.name for node in graph.origin_nodes]) == {'deployment0'}
+    assert {node.name for node in graph.origin_nodes} == {'deployment0'}
 
     node_deployment0 = graph.origin_nodes[0]
     assert node_deployment0.name == 'deployment0'
@@ -273,7 +269,7 @@ def test_topology_graph_build_merge_in_last_deployment(
     merge_graph_dict_directly_merge_in_last_deployment,
 ):
     graph = TopologyGraph(merge_graph_dict_directly_merge_in_last_deployment)
-    assert set([node.name for node in graph.origin_nodes]) == {'deployment0'}
+    assert {node.name for node in graph.origin_nodes} == {'deployment0'}
 
     node_deployment0 = graph.origin_nodes[0]
     assert node_deployment0.number_of_parts == 1
@@ -317,7 +313,7 @@ def test_topology_graph_build_merge_in_last_deployment(
 
 def test_topology_graph_build_complete(complete_graph_dict):
     graph = TopologyGraph(complete_graph_dict)
-    assert set([node.name for node in graph.origin_nodes]) == {
+    assert {node.name for node in graph.origin_nodes} == {
         'deployment0',
         'deployment4',
         'deployment6',
@@ -400,14 +396,12 @@ def test_topology_graph_build_hanging_after_merge(graph_hanging_deployment_after
         len(graph.origin_nodes[node_names_list.index('deployment0')].outgoing_nodes)
         == 2
     )
-    assert set(
-        [
-            node.name
-            for node in graph.origin_nodes[
-                node_names_list.index('deployment0')
-            ].outgoing_nodes
-        ]
-    ) == {'deployment1', 'deployment2'}
+    assert {
+        node.name
+        for node in graph.origin_nodes[
+            node_names_list.index('deployment0')
+        ].outgoing_nodes
+    } == {'deployment1', 'deployment2'}
 
     node_deployment0 = graph.origin_nodes[node_names_list.index('deployment0')]
     assert node_deployment0.name == 'deployment0'
@@ -442,14 +436,12 @@ def test_topology_graph_build_hanging_after_merge(graph_hanging_deployment_after
     assert node_deployment4.name == 'deployment4'
     assert node_deployment4.number_of_parts == 1
     assert len(node_deployment4.outgoing_nodes) == 1
-    assert set(
-        [
-            node.name
-            for node in graph.origin_nodes[
-                node_names_list.index('deployment4')
-            ].outgoing_nodes
-        ]
-    ) == {'deployment5'}
+    assert {
+        node.name
+        for node in graph.origin_nodes[
+            node_names_list.index('deployment4')
+        ].outgoing_nodes
+    } == {'deployment5'}
     assert not node_deployment4.floating
 
     node_deployment5 = node_deployment4.outgoing_nodes[0]
@@ -561,11 +553,9 @@ class DummyMockConnectionPool:
         response_msg = copy.deepcopy(requests[0])
         new_docs = DocumentArray()
         for doc in requests[0].docs:
-            clientid = doc.text[0:7]
+            clientid = doc.text[:7]
             self.sent_msg[clientid][deployment] = doc.text
-            new_doc = Document(
-                text=doc.text + f'-{clientid}-{deployment}', tags=doc.tags
-            )
+            new_doc = Document(text=f'{doc.text}-{clientid}-{deployment}', tags=doc.tags)
             new_docs.append(new_doc)
             self.responded_messages[clientid][deployment] = new_doc.text
 
@@ -688,10 +678,7 @@ async def test_message_ordering_bifurcation_graph(
         assert len(client_resps) == 2
 
         def sorting_key(msg):
-            if len(msg.docs) > 0:
-                return msg.docs[0].text
-            else:
-                return '-1'
+            return msg.docs[0].text if len(msg.docs) > 0 else '-1'
 
         sorted_clients_resps = list(sorted(client_resps, key=sorting_key))
 

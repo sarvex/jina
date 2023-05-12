@@ -86,5 +86,5 @@ async def test_synchornization_when_resetting_connection(replica_list, logger):
         return_exceptions=True,
     )
     assert not any(
-        [issubclass(type(response), BaseException) for response in responses]
+        issubclass(type(response), BaseException) for response in responses
     )

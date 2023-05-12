@@ -325,7 +325,7 @@ def test_correctness(use_stream):
                     ],
                 )
             )
-            assert all([len(result) == 2 for result in results])
+            assert all(len(result) == 2 for result in results)
             assert [doc.text for doc in results[0]] == [
                 f'a{BAR_SUCCESS_MSG}',
                 f'b{BAR_SUCCESS_MSG}',
@@ -369,7 +369,7 @@ def test_correctness(use_stream):
                     ],
                 )
             )
-            assert all([len(result) == 1 for result in results])
+            assert all(len(result) == 1 for result in results)
             assert [doc.text for doc in results[0]] == [f'a{BAR_SUCCESS_MSG}']
             assert [doc.text for doc in results[1]] == [f'b{BAR_SUCCESS_MSG}']
             assert [doc.text for doc in results[2]] == [f'c{BAR_SUCCESS_MSG}']
@@ -421,15 +421,9 @@ def test_param_correctness(use_stream):
                     ],
                 )
             )
-            assert all([len(result) == 2 for result in results])
-            assert [doc.text for doc in results[0]] == [
-                f'a{str(PARAM)}',
-                f'b{str(PARAM)}',
-            ]
-            assert [doc.text for doc in results[1]] == [
-                f'c{str(PARAM)}',
-                f'd{str(PARAM)}',
-            ]
+            assert all(len(result) == 2 for result in results)
+            assert [doc.text for doc in results[0]] == [f'a{PARAM}', f'b{PARAM}']
+            assert [doc.text for doc in results[1]] == [f'c{PARAM}', f'd{PARAM}']
 
         with mp.Pool(2) as p:
             PARAM1 = {'key1': 'value1'}
@@ -449,16 +443,16 @@ def test_param_correctness(use_stream):
             )
             assert [len(r) for r in results] == [4, 4]
             assert [doc.text for doc in results[0]] == [
-                f'A{str(PARAM1)}',
-                f'B{str(PARAM1)}',
-                f'C{str(PARAM1)}',
-                f'D{str(PARAM1)}',
+                f'A{PARAM1}',
+                f'B{PARAM1}',
+                f'C{PARAM1}',
+                f'D{PARAM1}',
             ]
             assert [doc.text for doc in results[1]] == [
-                f'A{str(PARAM2)}',
-                f'B{str(PARAM2)}',
-                f'C{str(PARAM2)}',
-                f'D{str(PARAM2)}',
+                f'A{PARAM2}',
+                f'B{PARAM2}',
+                f'C{PARAM2}',
+                f'D{PARAM2}',
             ]
 
         with mp.Pool(3) as p:
@@ -480,17 +474,17 @@ def test_param_correctness(use_stream):
             )
             assert [len(r) for r in results] == [3, 4, 1]
             assert [doc.text for doc in results[0]] == [
-                f'A{str(PARAM1)}',
-                f'B{str(PARAM1)}',
-                f'C{str(PARAM1)}',
+                f'A{PARAM1}',
+                f'B{PARAM1}',
+                f'C{PARAM1}',
             ]
             assert [doc.text for doc in results[1]] == [
-                f'A{str(PARAM2)}',
-                f'B{str(PARAM2)}',
-                f'C{str(PARAM2)}',
-                f'D{str(PARAM2)}',
+                f'A{PARAM2}',
+                f'B{PARAM2}',
+                f'C{PARAM2}',
+                f'D{PARAM2}',
             ]
-            assert [doc.text for doc in results[2]] == [f'D{str(PARAM1)}']
+            assert [doc.text for doc in results[2]] == [f'D{PARAM1}']
 
 
 def test_failure_propagation():
@@ -562,8 +556,7 @@ def _assert_all_docs_processed(port, num_docs, endpoint):
 
 
 def _create_test_data_message(num_docs, endpoint: str = '/'):
-    req = list(request_generator(endpoint, DocumentArray.empty(num_docs)))[0]
-    return req
+    return list(request_generator(endpoint, DocumentArray.empty(num_docs)))[0]
 
 
 @pytest.mark.asyncio

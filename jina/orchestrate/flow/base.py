@@ -583,17 +583,16 @@ class Flow(
             else:
                 endpoint = []
 
-        if isinstance(endpoint, (list, tuple)):
-            for idx, s in enumerate(endpoint):
-                if s == deployment_name:
-                    raise FlowTopologyError(
-                        'the income/output of a deployment can not be itself'
-                    )
-        else:
+        if not isinstance(endpoint, (list, tuple)):
             raise ValueError(f'endpoint={endpoint} is not parsable')
 
+        for s in endpoint:
+            if s == deployment_name:
+                raise FlowTopologyError(
+                    'the income/output of a deployment can not be itself'
+                )
         # if an endpoint is being inspected, then replace it with inspected Deployment
-        endpoint = set(op_flow._inspect_deployments.get(ep, ep) for ep in endpoint)
+        endpoint = {op_flow._inspect_deployments.get(ep, ep) for ep in endpoint}
         return endpoint
 
     @property
@@ -620,9 +619,7 @@ class Flow(
         if name not in self._deployment_nodes:
             raise FlowMissingDeploymentError(f'{name} can not be found in this Flow')
 
-        if self._last_changed_deployment and name == self._last_deployment:
-            pass
-        else:
+        if not self._last_changed_deployment or name != self._last_deployment:
             self._last_changed_deployment.append(name)
 
         # graph is now changed so we need to
@@ -640,23 +637,19 @@ class Flow(
         deployments_no_reduce: List[str],
         **kwargs,
     ):
-        kwargs.update(
-            dict(
-                name=GATEWAY_NAME,
-                ctrl_with_ipc=True,  # otherwise ctrl port would be conflicted
-                host=self.host,
-                protocol=self.protocol,
-                port=self.port,
-                deployment_role=DeploymentRoleType.GATEWAY,
-                expose_endpoints=json.dumps(self._endpoints_mapping),
-                env=self.env,
-                log_config=kwargs.get('log_config')
-                if 'log_config' in kwargs
-                else self.args.log_config,
-            )
+        kwargs |= dict(
+            name=GATEWAY_NAME,
+            ctrl_with_ipc=True,
+            host=self.host,
+            protocol=self.protocol,
+            port=self.port,
+            deployment_role=DeploymentRoleType.GATEWAY,
+            expose_endpoints=json.dumps(self._endpoints_mapping),
+            env=self.env,
+            log_config=kwargs.get('log_config', self.args.log_config),
         )
 
-        kwargs.update(self._gateway_kwargs)
+        kwargs |= self._gateway_kwargs
         args = ArgNamespace.kwargs2namespace(kwargs, set_gateway_parser())
 
         # We need to check later if the port was manually set or randomly
@@ -688,13 +681,11 @@ class Flow(
         }
 
     def _get_deployments_addresses(self) -> Dict[str, List[str]]:
-        graph_dict = {}
-        for node, deployment in self._deployment_nodes.items():
-            if node == GATEWAY_NAME:
-                continue
-            graph_dict[node] = deployment._get_connection_list()
-
-        return graph_dict
+        return {
+            node: deployment._get_connection_list()
+            for node, deployment in self._deployment_nodes.items()
+            if node != GATEWAY_NAME
+        }
 
     def _get_k8s_deployments_addresses(
         self, k8s_namespace: str
@@ -726,32 +717,21 @@ class Flow(
         return graph_dict if graph_dict else None
 
     def _get_docker_compose_deployments_addresses(self) -> Dict[str, List[str]]:
-        graph_dict = {}
-
-        for node, v in self._deployment_nodes.items():
-            if node == GATEWAY_NAME:
-                continue
-
-            deployment_docker_compose_address = v._docker_compose_address
-            graph_dict[node] = deployment_docker_compose_address
-
-        return graph_dict
+        return {
+            node: v._docker_compose_address
+            for node, v in self._deployment_nodes.items()
+            if node != GATEWAY_NAME
+        }
 
     def _get_graph_conditions(self) -> Dict[str, Dict]:
-        graph_condition = {}
-        for node, v in self._deployment_nodes.items():
-            if v.args.when is not None:  # condition on input docs
-                graph_condition[node] = v.args.when
-
-        return graph_condition
+        return {
+            node: v.args.when
+            for node, v in self._deployment_nodes.items()
+            if v.args.when is not None
+        }
 
     def _get_disabled_reduce_deployments(self) -> List[str]:
-        disabled_deployments = []
-        for node, v in self._deployment_nodes.items():
-            if v.args.no_reduce:
-                disabled_deployments.append(node)
-
-        return disabled_deployments
+        return [node for node, v in self._deployment_nodes.items() if v.args.no_reduce]
 
     def _get_graph_representation(self) -> Dict[str, List[str]]:
         def _add_node(graph, n):
@@ -1198,14 +1178,10 @@ class Flow(
                     kwargs[key] = value
 
             # update kwargs of this Deployment
-            kwargs.update(
-                dict(
-                    name=deployment_name,
-                    deployment_role=deployment_role,
-                    log_config=kwargs.get('log_config')
-                    if 'log_config' in kwargs
-                    else self.args.log_config,
-                )
+            kwargs |= dict(
+                name=deployment_name,
+                deployment_role=deployment_role,
+                log_config=kwargs.get('log_config', self.args.log_config),
             )
             parser = set_deployment_parser()
             if deployment_role == DeploymentRoleType.GATEWAY:
@@ -1588,12 +1564,11 @@ class Flow(
             :meth:`inspect`
 
         """
-        needs = [
+        if needs := [
             k
             for k, v in self._deployment_nodes.items()
             if v.role == DeploymentRoleType.INSPECT
-        ]
-        if needs:
+        ]:
             if include_last_deployment:
                 needs.append(self._last_deployment)
             return self.add(
@@ -1690,7 +1665,7 @@ class Flow(
             }
             while (
                 len(op_flow._last_changed_deployment) > 0
-                and len(removed_deployments) > 0
+                and removed_deployments
                 and op_flow._last_deployment in removed_deployments
             ):
                 op_flow._last_changed_deployment.pop()
@@ -1699,25 +1674,22 @@ class Flow(
             # if an endpoint is being inspected, then replace it with inspected Deployment
             # but not those inspect related node
             if op_flow.args.inspect.is_keep:
-                deployment.needs = set(
+                deployment.needs = {
                     ep
                     if deployment.role.is_inspect
                     else op_flow._inspect_deployments.get(ep, ep)
                     for ep in deployment.needs
-                )
+                }
             else:
-                deployment.needs = set(
-                    reverse_inspect_map.get(ep, ep) for ep in deployment.needs
-                )
+                deployment.needs = {reverse_inspect_map.get(ep, ep) for ep in deployment.needs}
 
-        hanging_deployments = _hanging_deployments(op_flow)
-        if hanging_deployments:
+        if hanging_deployments := _hanging_deployments(op_flow):
             op_flow.logger.warning(
                 f'{hanging_deployments} are "floating" in this flow with no deployment receiving from them, '
                 f'you may want to double check if it is intentional or some mistake'
             )
         op_flow._build_level = FlowBuildLevel.GRAPH
-        if len(removed_deployments) > 0:
+        if removed_deployments:
             # very dirty
             op_flow._deployment_nodes[GATEWAY_NAME].args.graph_description = json.dumps(
                 op_flow._get_graph_representation()
@@ -2015,7 +1987,7 @@ class Flow(
                 protocol=self.protocol,
                 log_config=self.args.log_config,
             )
-            kwargs.update(self._gateway_kwargs)
+            kwargs |= self._gateway_kwargs
             self._client = Client(**kwargs)
 
         return self._client
@@ -2075,23 +2047,16 @@ class Flow(
                     f'{need_print}:::{str(_s_role)} {line_st} {node_print}:::{str(_e_role)};'
                 )
 
-        mermaid_graph.append(
-            f'classDef {str(DeploymentRoleType.INSPECT)} stroke:#F29C9F'
+        mermaid_graph.extend(
+            (
+                f'classDef {str(DeploymentRoleType.INSPECT)} stroke:#F29C9F',
+                f'classDef {str(DeploymentRoleType.JOIN_INSPECT)} stroke:#F29C9F',
+                f'classDef {str(DeploymentRoleType.GATEWAY)} fill:none,color:#000,stroke:none',
+                f'classDef {str(DeploymentRoleType.INSPECT_AUX_PASS)} stroke-dasharray: 2 2',
+                'classDef HEADTAIL fill:#32C8CD1D',
+                f'\nclassDef EXTERNAL fill:#fff,stroke:#32C8CD',
+            )
         )
-
-        mermaid_graph.append(
-            f'classDef {str(DeploymentRoleType.JOIN_INSPECT)} stroke:#F29C9F'
-        )
-        mermaid_graph.append(
-            f'classDef {str(DeploymentRoleType.GATEWAY)} fill:none,color:#000,stroke:none'
-        )
-        mermaid_graph.append(
-            f'classDef {str(DeploymentRoleType.INSPECT_AUX_PASS)} stroke-dasharray: 2 2'
-        )
-        mermaid_graph.append(f'classDef HEADTAIL fill:#32C8CD1D')
-
-        mermaid_graph.append(f'\nclassDef EXTERNAL fill:#fff,stroke:#32C8CD')
-
         return '\n'.join(mermaid_graph)
 
     def plot(
@@ -2142,10 +2107,7 @@ class Flow(
         if vertical_layout:
             mermaid_str = mermaid_str.replace('flowchart LR', 'flowchart TD')
 
-        image_type = 'svg'
-        if output and not output.endswith('svg'):
-            image_type = 'img'
-
+        image_type = 'img' if output and not output.endswith('svg') else 'svg'
         url = op_flow._mermaid_to_url(mermaid_str, image_type)
         showed = False
         if inline_display:
@@ -2194,12 +2156,7 @@ class Flow(
             res = self._gateway_kwargs.get('port', None) or self._gateway_kwargs.get(
                 'ports', None
             )
-        if not isinstance(res, list):
-            return res
-        elif len(res) == 1:
-            return res[0]
-        else:
-            return res
+        return res if not isinstance(res, list) or len(res) != 1 else res[0]
 
     @port.setter
     def port(self, value: Union[int, List[int]]):
@@ -2455,23 +2412,20 @@ class Flow(
 
         try:
             watch_changes = self.args.reload or any(
-                [
-                    deployment.args.reload
-                    for deployment in list(self._deployment_nodes.values())
-                ]
+                deployment.args.reload
+                for deployment in list(self._deployment_nodes.values())
             )
             watch_files_from_deployments = {}
             for name, deployment in self._deployment_nodes.items():
-                if deployment.args.reload:
-                    if deployment._is_executor_from_yaml:
-                        watch_files_from_deployments[deployment.args.uses] = name
+                if deployment.args.reload and deployment._is_executor_from_yaml:
+                    watch_files_from_deployments[deployment.args.uses] = name
             watch_files_list = list(watch_files_from_deployments.keys())
 
             config_loaded = getattr(self, '_config_loaded', '')
             if config_loaded.endswith('yml') or config_loaded.endswith('yaml'):
                 watch_files_list.append(config_loaded)
 
-            if watch_changes and len(watch_files_list) > 0:
+            if watch_changes and watch_files_list:
 
                 with ImportExtensions(
                     required=True,
@@ -2482,7 +2436,7 @@ class Flow(
                     from watchfiles import watch
 
                 new_stop_event = stop_event or threading.Event()
-                if len(watch_files_list) > 0:
+                if watch_files_list:
                     for changes in watch(*watch_files_list, stop_event=new_stop_event):
                         for _, changed_file in changes:
                             if changed_file not in watch_files_from_deployments:
@@ -2538,10 +2492,7 @@ class Flow(
         if not isinstance(v, list):
             v = [v]
         v = GatewayProtocolType.from_string_list(v)
-        if len(v) == 1:
-            return v[0]
-        else:
-            return v
+        return v[0] if len(v) == 1 else v
 
     @protocol.setter
     def protocol(

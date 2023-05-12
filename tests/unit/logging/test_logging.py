@@ -65,7 +65,7 @@ def test_logging_level_yaml(monkeypatch):
             os.remove(fn)
         log(file_logger)
         assert file_logger.logger.level == LogVerbosity.from_string('INFO')
-    for f in glob.glob(cur_dir + '/*.log'):
+    for f in glob.glob(f'{cur_dir}/*.log'):
         os.remove(f)
 
 
@@ -80,7 +80,7 @@ def test_logging_file(monkeypatch):
         assert os.path.exists(fn)
         with open(fn) as fp:
             assert len(fp.readlines()) == 5
-    for f in glob.glob(cur_dir + '/*.log'):
+    for f in glob.glob(f'{cur_dir}/*.log'):
         os.remove(f)
 
 

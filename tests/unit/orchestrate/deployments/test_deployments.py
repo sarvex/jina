@@ -168,8 +168,7 @@ def test_pod_context_replicas(replicas):
 @pytest.mark.slow
 @pytest.mark.parametrize('shards', [1, 2, 4])
 def test_pod_context_shards_replicas(shards):
-    args_list = ['--replicas', str(3)]
-    args_list.extend(['--shards', str(shards)])
+    args_list = ['--replicas', str(3), *['--shards', str(shards)]]
     args = set_deployment_parser().parse_args(args_list)
     with Deployment(args, include_gateway=False) as bp:
         assert bp.num_pods == shards * 3 + 1 if shards > 1 else 3
@@ -316,8 +315,7 @@ def test_pod_naming_with_shards():
 
 @pytest.mark.slow
 def test_pod_activates_shards():
-    args_list = ['--replicas', '3']
-    args_list.extend(['--shards', '3'])
+    args_list = ['--replicas', '3', '--shards', '3']
     args = set_deployment_parser().parse_args(args_list)
     args.uses = 'AppendShardExecutor'
     args.polling = PollingType.ALL
@@ -570,7 +568,7 @@ def test_pod_remote_pod_replicas_host(num_shards, num_replicas):
     with Deployment(args, include_gateway=False) as pod:
         assert pod.num_pods == num_shards * num_replicas + (1 if num_shards > 1 else 0)
         pod_args = dict(pod.pod_args['pods'])
-        for k, replica_args in pod_args.items():
+        for replica_args in pod_args.values():
             assert len(replica_args) == num_replicas
             for replica_arg in replica_args:
                 assert replica_arg.host == __default_host__
@@ -586,10 +584,7 @@ def test_to_k8s_yaml(tmpdir, uses, replicas, shards):
     dep = Deployment(port_expose=2020, uses=uses, replicas=replicas, shards=shards)
     dep.to_kubernetes_yaml(output_base_path=tmpdir)
 
-    if shards == 1:
-        shards_iter = ['']
-    else:
-        shards_iter = [f'-{shard}' for shard in range(shards)]
+    shards_iter = [''] if shards == 1 else [f'-{shard}' for shard in range(shards)]
     for shard in shards_iter:
         with open(os.path.join(tmpdir, f'executor{shard}.yml')) as f:
             exec_yaml = list(yaml.safe_load_all(f))[-1]
@@ -599,7 +594,7 @@ def test_to_k8s_yaml(tmpdir, uses, replicas, shards):
             ].startswith('jinahub/')
 
     if shards != 1:
-        with open(os.path.join(tmpdir, f'executor-head.yml')) as f:
+        with open(os.path.join(tmpdir, 'executor-head.yml')) as f:
             head_yaml = list(yaml.safe_load_all(f))[-1]
             assert head_yaml['metadata']['name'] == 'executor-head'
             assert head_yaml['spec']['replicas'] == 1

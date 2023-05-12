@@ -97,8 +97,7 @@ class DockerComposeConfig:
 
             envs = [f'JINA_LOG_LEVEL={os.getenv("JINA_LOG_LEVEL", "INFO")}']
             if cargs.env:
-                for k, v in cargs.env.items():
-                    envs.append(f'{k}={v}')
+                envs.extend(f'{k}={v}' for k, v in cargs.env.items())
             return {
                 'image': image_name,
                 'entrypoint': ['jina'],
@@ -310,7 +309,6 @@ class DockerComposeConfig:
             'services': [],
         }
         shards = getattr(args, 'shards', 1)
-        replicas = getattr(args, 'replicas', 1)
         uses_before = getattr(args, 'uses_before', None)
         uses_after = getattr(args, 'uses_after', None)
 
@@ -327,6 +325,7 @@ class DockerComposeConfig:
             import json
 
             connection_list = {}
+            replicas = getattr(args, 'replicas', 1)
             for shard_id in range(shards):
                 shard_name = f'{self.name}-{shard_id}' if shards > 1 else f'{self.name}'
                 connection_list[str(shard_id)] = []
@@ -422,36 +421,35 @@ class DockerComposeConfig:
                     self.worker_services[0].get_gateway_config(),
                 )
             ]
-        else:
-            services = []
-            if self.head_service is not None:
-                services.append(
-                    (
-                        self.head_service.compatible_name,
-                        self.head_service.get_runtime_config()[0],
-                    )
+        services = []
+        if self.head_service is not None:
+            services.append(
+                (
+                    self.head_service.compatible_name,
+                    self.head_service.get_runtime_config()[0],
                 )
-            if self.uses_before_service is not None:
-                services.append(
-                    (
-                        self.uses_before_service.compatible_name,
-                        self.uses_before_service.get_runtime_config()[0],
-                    )
+            )
+        if self.uses_before_service is not None:
+            services.append(
+                (
+                    self.uses_before_service.compatible_name,
+                    self.uses_before_service.get_runtime_config()[0],
                 )
-            if self.uses_after_service is not None:
-                services.append(
-                    (
-                        self.uses_after_service.compatible_name,
-                        self.uses_after_service.get_runtime_config()[0],
-                    )
+            )
+        if self.uses_after_service is not None:
+            services.append(
+                (
+                    self.uses_after_service.compatible_name,
+                    self.uses_after_service.get_runtime_config()[0],
                 )
-            for worker_service in self.worker_services:
-                configs = worker_service.get_runtime_config()
-                for rep_id, config in enumerate(configs):
-                    name = (
-                        f'{worker_service.name}/rep-{rep_id}'
-                        if len(configs) > 1
-                        else worker_service.name
-                    )
-                    services.append((to_compatible_name(name), config))
-            return services
+            )
+        for worker_service in self.worker_services:
+            configs = worker_service.get_runtime_config()
+            for rep_id, config in enumerate(configs):
+                name = (
+                    f'{worker_service.name}/rep-{rep_id}'
+                    if len(configs) > 1
+                    else worker_service.name
+                )
+                services.append((to_compatible_name(name), config))
+        return services

@@ -173,13 +173,13 @@ class GrpcConnectionPool:
         results = []
         connections = []
         if polling_type == PollingType.ANY:
-            replica_list = self._connections.get_replicas(deployment, head, shard_id)
-            if replica_list:
+            if replica_list := self._connections.get_replicas(
+                deployment, head, shard_id
+            ):
                 connections.append(replica_list)
         elif polling_type == PollingType.ALL:
             shard_replica_lists = self._connections.get_replicas_all_shards(deployment)
-            for replica_list in shard_replica_lists:
-                connections.append(replica_list)
+            connections.extend(iter(shard_replica_lists))
         else:
             raise ValueError(f'Unsupported polling type {polling_type}')
 
@@ -213,18 +213,16 @@ class GrpcConnectionPool:
         :param retries: number of retries per gRPC call. If <0 it defaults to max(3, num_replicas)
         :return: asyncio.Task items to send call
         """
-        connection_list = self._connections.get_replicas(
+        if connection_list := self._connections.get_replicas(
             deployment, head, shard_id, True
-        )
-        if connection_list:
+        ):
             return self._send_discover_endpoint(
                 timeout=timeout, connection_list=connection_list, retries=retries
             )
-        else:
-            self._logger.debug(
-                f'no available connections for deployment {deployment} and shard {shard_id}'
-            )
-            return None
+        self._logger.debug(
+            f'no available connections for deployment {deployment} and shard {shard_id}'
+        )
+        return None
 
     def send_requests_once(
         self,
@@ -249,9 +247,8 @@ class GrpcConnectionPool:
         :param retries: number of retries per gRPC call. If <0 it defaults to max(3, num_replicas)
         :return: asyncio.Task representing the send call
         """
-        replicas = self._connections.get_replicas(deployment, head, shard_id)
-        if replicas:
-            result = self._send_requests(
+        if replicas := self._connections.get_replicas(deployment, head, shard_id):
+            return self._send_requests(
                 requests,
                 replicas,
                 endpoint=endpoint,
@@ -259,12 +256,10 @@ class GrpcConnectionPool:
                 timeout=timeout,
                 retries=retries,
             )
-            return result
-        else:
-            self._logger.debug(
-                f'no available connections for deployment {deployment} and shard {shard_id}'
-            )
-            return None
+        self._logger.debug(
+            f'no available connections for deployment {deployment} and shard {shard_id}'
+        )
+        return None
 
     def add_connection(
         self,
@@ -307,10 +302,9 @@ class GrpcConnectionPool:
         """
         if head:
             return await self._connections.remove_head(deployment, address)
-        else:
-            if shard_id is None:
-                shard_id = 0
-            return await self._connections.remove_replica(deployment, address, shard_id)
+        if shard_id is None:
+            shard_id = 0
+        return await self._connections.remove_replica(deployment, address, shard_id)
 
     async def close(self):
         """

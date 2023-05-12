@@ -172,29 +172,28 @@ class _ConnectionStubs:
                         self._record_received_bytes_metric(response.nbytes)
                         return response, None
 
-        if request_type == DataRequest and len(requests) > 1:
-            if self.data_list_stub:
-                for request in requests:
-                    self._record_request_bytes_metric(request.nbytes)
-                call_result = self.data_list_stub.process_data(
-                    requests,
-                    metadata=metadata,
-                    compression=compression,
-                    timeout=timeout,
-                )
-                with timer:
-                    metadata, response = (
-                        await call_result.trailing_metadata(),
-                        await call_result,
-                    )
-                    self._record_received_bytes_metric(response.nbytes)
-                return response, metadata
-            else:
-                raise ValueError(
-                    'Can not send list of DataRequests. gRPC endpoint not available.'
-                )
-        else:
+        if request_type != DataRequest or len(requests) <= 1:
             raise ValueError(f'Unsupported request type {type(requests[0])}')
+        if self.data_list_stub:
+            for request in requests:
+                self._record_request_bytes_metric(request.nbytes)
+            call_result = self.data_list_stub.process_data(
+                requests,
+                metadata=metadata,
+                compression=compression,
+                timeout=timeout,
+            )
+            with timer:
+                metadata, response = (
+                    await call_result.trailing_metadata(),
+                    await call_result,
+                )
+                self._record_received_bytes_metric(response.nbytes)
+            return response, metadata
+        else:
+            raise ValueError(
+                'Can not send list of DataRequests. gRPC endpoint not available.'
+            )
 
     async def send_info_rpc(self, timeout: Optional[float] = None):
         """

@@ -107,11 +107,10 @@ def test_wrap_func():
 
 
 def test_pprint_routes(capfd):
-    result = []
     r = jina_pb2.RouteProto()
     r.status.code = jina_pb2.StatusProto.ERROR
     r.status.exception.stacks.extend(['r1\nline1', 'r2\nline2'])
-    result.append(r)
+    result = [r]
     r = jina_pb2.RouteProto()
     r.status.code = jina_pb2.StatusProto.SUCCESS
     result.append(r)
@@ -167,7 +166,7 @@ def test_random_docs():
             assert c2.tags['parent_id'] == c1.tags['parent_id']
     assert len(set(doc_ids)) == len(doc_ids)
     assert len(set(chunk_ids)) == len(chunk_ids)
-    assert len(set(doc_ids).intersection(set(chunk_ids))) == 0
+    assert not set(doc_ids).intersection(set(chunk_ids))
 
 
 def test_complete_path_success():
@@ -254,7 +253,7 @@ def test_random_port_unique(config):
     reset_ports()
     assert os.environ['JINA_RANDOM_PORT_MIN']
     generated_ports = set()
-    for i in range(1000):
+    for _ in range(1000):
         port = random_port()
         assert port not in generated_ports
         assert int(os.environ['JINA_RANDOM_PORT_MIN']) <= port <= 65535

@@ -100,12 +100,11 @@ class GatewayRequestHandler:
         if self.warmup_task:
             try:
                 if not self.warmup_task.done():
-                    self.logger.debug(f'Cancelling warmup task.')
+                    self.logger.debug('Cancelling warmup task.')
                     self.warmup_stop_event.set()  # this event is useless if simply cancel
                     self.warmup_task.cancel()
             except Exception as ex:
                 self.logger.debug(f'exception during warmup task cancellation: {ex}')
-                pass
 
     async def close(self):
         """

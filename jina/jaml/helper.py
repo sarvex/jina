@@ -57,7 +57,7 @@ class JinaConstructor(FullConstructor):
             raise ConstructorError(
                 None,
                 None,
-                'expected a mapping node, but found %s' % node.id,
+                f'expected a mapping node, but found {node.id}',
                 node.start_mark,
             )
         mapping = {}
@@ -70,7 +70,7 @@ class JinaConstructor(FullConstructor):
                     raise ConstructorError(
                         'while constructing a mapping',
                         node.start_mark,
-                        'found unacceptable key (%s)' % exc,
+                        f'found unacceptable key ({exc})',
                         key_node.start_mark,
                     )
             value = self.construct_object(value_node, deep=deep)
@@ -243,7 +243,7 @@ def _search_file_in_paths(path, extra_search_paths: Optional[List[str]] = None):
 
     search_paths = []
     if extra_search_paths:
-        search_paths.extend((v for v in extra_search_paths))
+        search_paths.extend(iter(extra_search_paths))
 
     frame = inspect.currentframe()
 

@@ -19,7 +19,7 @@ def get_full_schema() -> dict:
         schema_deployment,
         IMPORTED.schema_executors,
     ]:
-        definitions.update(s)
+        definitions |= s
 
     return {
         '$id': f'https://api.jina.ai/schemas/{__version__}.json',

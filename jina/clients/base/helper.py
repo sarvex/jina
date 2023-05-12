@@ -235,7 +235,7 @@ class WebsocketClientlet(AioHttpClientlet):
         try:
             return await self.websocket.send_bytes(b'')
         except ConnectionResetError:
-            self.logger.critical(f'server connection closed already!')
+            self.logger.critical('server connection closed already!')
 
     async def send_eoi(self):
         """To confirm end of iteration, we send `bytes(True)` to the server.
@@ -316,10 +316,10 @@ def handle_response_status(http_status: int, response_string: str, url: str):
     """
     if http_status == status.HTTP_404_NOT_FOUND:
         raise BadClient(f'no such endpoint {url}')
-    elif (
-        http_status == status.HTTP_503_SERVICE_UNAVAILABLE
-        or http_status == status.HTTP_504_GATEWAY_TIMEOUT
-    ):
+    elif http_status in [
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+        status.HTTP_504_GATEWAY_TIMEOUT,
+    ]:
         if (
             'header' in response_string
             and 'status' in response_string['header']

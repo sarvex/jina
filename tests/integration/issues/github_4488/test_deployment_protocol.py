@@ -21,13 +21,13 @@ def cert_prefix():
 @pytest.fixture
 def cert_pem(cert_prefix):
     """This is the cert entry of a self-signed local cert"""
-    return cert_prefix + '/server.crt'
+    return f'{cert_prefix}/server.crt'
 
 
 @pytest.fixture
 def key_pem(cert_prefix):
     """This is the key entry of a self-signed local cert"""
-    return cert_prefix + '/server.key'
+    return f'{cert_prefix}/server.key'
 
 
 @pytest.mark.parametrize('protocol', ['http', 'websocket', 'grpc'])

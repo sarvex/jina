@@ -76,7 +76,7 @@ def run(
 
     def _unset_envs():
         if envs:
-            for k in envs.keys():
+            for k in envs:
                 os.environ.pop(k, None)
 
     def _set_envs():
@@ -107,7 +107,7 @@ def run(
     finally:
         _unset_envs()
         is_shutdown.set()
-        logger.debug(f'process terminated')
+        logger.debug('process terminated')
 
 
 class BasePod(ABC):
@@ -159,7 +159,7 @@ class BasePod(ABC):
         self.logger.debug('waiting for ready or shutdown signal from runtime')
         if not self.is_shutdown.is_set() and self.is_started.is_set():
             try:
-                self.logger.debug(f'terminate')
+                self.logger.debug('terminate')
                 self._terminate()
                 if not self.is_shutdown.wait(
                         timeout=self._timeout_ctrl if not __windows__ else 1.0
@@ -273,20 +273,15 @@ class BasePod(ABC):
         timeout_ns = 1e9 * _timeout if _timeout else None
         now = time.time_ns()
         while timeout_ns is None or time.time_ns() - now < timeout_ns:
-            if (
-                    self.ready_or_shutdown.event.is_set()
-                    and (  # submit the health check to the pod, if it is
-                    self.is_shutdown.is_set()  # a worker and not shutdown
-                    or not self.args.pod_role == PodRoleType.WORKER
-                    or (
-                            await BaseServer.async_is_ready(
-                                ctrl_address=self.runtime_ctrl_address,
-                                timeout=_timeout,
-                                protocol=getattr(self.args, 'protocol', ["grpc"])[0]
-                                # Executor does not have protocol yet
-                            )
-                    )
-            )
+            if self.ready_or_shutdown.event.is_set() and (
+                self.is_shutdown.is_set()
+                or self.args.pod_role != PodRoleType.WORKER
+                or await BaseServer.async_is_ready(
+                    ctrl_address=self.runtime_ctrl_address,
+                    timeout=_timeout,
+                    protocol=getattr(self.args, 'protocol', ["grpc"])[0]
+                    # Executor does not have protocol yet
+                )
             ):
                 self._check_failed_to_start()
                 self.logger.debug(__ready_msg__)
@@ -369,17 +364,17 @@ class Pod(BasePod):
         :param args: extra positional arguments to pass to join
         :param kwargs: extra keyword arguments to pass to join
         """
-        self.logger.debug(f'joining the process')
+        self.logger.debug('joining the process')
         self.worker.join(*args, **kwargs)
-        self.logger.debug(f'successfully joined the process')
+        self.logger.debug('successfully joined the process')
 
     def _terminate(self):
         """Terminate the Pod.
         This method calls :meth:`terminate` in :class:`multiprocesssing.Process`.
         """
-        self.logger.debug(f'terminating the runtime process')
+        self.logger.debug('terminating the runtime process')
         self.worker.terminate()
-        self.logger.debug(f'runtime process properly terminated')
+        self.logger.debug('runtime process properly terminated')
 
     def _get_runtime_cls(self):
         from jina.orchestrate.pods.helper import update_runtime_cls

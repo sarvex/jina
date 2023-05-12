@@ -266,10 +266,10 @@ def batch_iterator(
         # as iterator, there is no way to know the length of it
         iterator = iter(data)
         while True:
-            chunk = tuple(islice(iterator, batch_size))
-            if not chunk:
+            if chunk := tuple(islice(iterator, batch_size)):
+                yield chunk
+            else:
                 return
-            yield chunk
     else:
         raise TypeError(f'unsupported type: {type(data)}')
 
@@ -281,17 +281,13 @@ def parse_arg(v: str) -> Optional[Union[bool, int, str, list, float]]:
     :param v: The string of arguments
     :return: The parsed arguments list.
     """
-    m = re.match(r'^[\'"](.*)[\'"]$', v)
-    if m:
-        return m.group(1)
+    if m := re.match(r'^[\'"](.*)[\'"]$', v):
+        return m[1]
 
     if v.startswith('[') and v.endswith(']'):
         # function args must be immutable tuples not list
         tmp = v.replace('[', '').replace(']', '').strip()
-        if len(tmp) > 0:
-            return [parse_arg(vv.strip()) for vv in tmp.split(',')]
-        else:
-            return []
+        return [parse_arg(vv.strip()) for vv in tmp.split(',')] if tmp != "" else []
     try:
         v = int(v)  # parse int parameter
     except ValueError:
@@ -559,10 +555,7 @@ def expand_env_var(v: str) -> Optional[Union[bool, int, str, list, float]]:
     :param v: String of environment variables.
     :return: Parsed environment variables.
     """
-    if isinstance(v, str):
-        return parse_arg(os.path.expandvars(v))
-    else:
-        return v
+    return parse_arg(os.path.expandvars(v)) if isinstance(v, str) else v
 
 
 def expand_dict(
@@ -586,7 +579,7 @@ def expand_dict(
                     p.__dict__[k] = SimpleNamespace()
                     _scan(v, p.__dict__[k])
                 elif isinstance(v, list):
-                    p.__dict__[k] = list()
+                    p.__dict__[k] = []
                     _scan(v, p.__dict__[k])
                 else:
                     p.__dict__[k] = v
@@ -596,7 +589,7 @@ def expand_dict(
                     p.append(SimpleNamespace())
                     _scan(v, p[idx])
                 elif isinstance(v, list):
-                    p.append(list())
+                    p.append([])
                     _scan(v, p[idx])
                 else:
                     p.append(v)
@@ -779,8 +772,7 @@ def warn_unknown_args(unknown_args: List[str]):
         if arg.replace('--', '') not in all_args:
             from jina.parsers.deprecated import get_deprecated_replacement
 
-            new_arg = get_deprecated_replacement(arg)
-            if new_arg:
+            if new_arg := get_deprecated_replacement(arg):
                 if not has_migration_tip:
                     warn_strs.append('Migration tips:')
                     has_migration_tip = True
@@ -877,12 +869,12 @@ class ArgNamespace:
         """
         if taboo is None:
             taboo = set()
-        non_defaults = {}
         _defaults = vars(parser.parse_args([]))
-        for k, v in vars(args).items():
-            if k in _defaults and k not in taboo and _defaults[k] != v:
-                non_defaults[k] = v
-        return non_defaults
+        return {
+            k: v
+            for k, v in vars(args).items()
+            if k in _defaults and k not in taboo and _defaults[k] != v
+        }
 
     @staticmethod
     def flatten_to_dict(
@@ -1254,7 +1246,7 @@ def convert_tuple_to_list(d: Dict):
             convert_tuple_to_list(v)
 
 
-def is_jupyter() -> bool:  # pragma: no cover
+def is_jupyter() -> bool:    # pragma: no cover
     """
     Check if we're running in a Jupyter notebook, using magic command `get_ipython` that only available in Jupyter.
 
@@ -1265,14 +1257,7 @@ def is_jupyter() -> bool:  # pragma: no cover
     except NameError:
         return False
     shell = get_ipython().__class__.__name__  # noqa: F821
-    if shell == 'ZMQInteractiveShell':
-        return True  # Jupyter notebook or qtconsole
-    elif shell == 'Shell':
-        return True  # Google colab
-    elif shell == 'TerminalInteractiveShell':
-        return False  # Terminal running IPython
-    else:
-        return False  # Other type (?)
+    return shell in ['ZMQInteractiveShell', 'Shell']
 
 
 def iscoroutinefunction(func: Callable):
@@ -1307,31 +1292,26 @@ def run_async(func, *args, **kwargs):
     except RuntimeError:
         loop = None
 
-    if loop and loop.is_running():
-        # eventloop already exist
-        # running inside Jupyter
-        if is_jupyter():
-            thread = _RunThread()
-            thread.start()
-            thread.join()
-            try:
-                return thread.result
-            except AttributeError:
-                from jina.excepts import BadClient
-
-                raise BadClient(
-                    'something wrong when running the eventloop, result can not be retrieved'
-                )
-        else:
-
-            raise RuntimeError(
-                'you have an eventloop running but not using Jupyter/ipython, '
-                'this may mean you are using Jina with other integration? if so, then you '
-                'may want to use Client/Flow(asyncio=True). If not, then '
-                'please report this issue here: https://github.com/jina-ai/jina'
-            )
-    else:
+    if not loop or not loop.is_running():
         return asyncio.run(func(*args, **kwargs))
+    if not is_jupyter():
+        raise RuntimeError(
+            'you have an eventloop running but not using Jupyter/ipython, '
+            'this may mean you are using Jina with other integration? if so, then you '
+            'may want to use Client/Flow(asyncio=True). If not, then '
+            'please report this issue here: https://github.com/jina-ai/jina'
+        )
+    thread = _RunThread()
+    thread.start()
+    thread.join()
+    try:
+        return thread.result
+    except AttributeError:
+        from jina.excepts import BadClient
+
+        raise BadClient(
+            'something wrong when running the eventloop, result can not be retrieved'
+        )
 
 
 def slugify(value):
@@ -1352,10 +1332,7 @@ def is_yaml_filepath(val) -> bool:
     :param val: Path of target file.
     :return: True if the file is YAML else False.
     """
-    if __windows__:
-        r = r'.*.ya?ml$'  # TODO: might not be exhaustive
-    else:
-        r = r'^[/\w\-\_\.]+.ya?ml$'
+    r = r'.*.ya?ml$' if __windows__ else r'^[/\w\-\_\.]+.ya?ml$'
     return re.match(r, val.strip()) is not None
 
 
@@ -1441,15 +1418,17 @@ def dunder_get(_dict: Any, key: str) -> Any:
 
     from google.protobuf.struct_pb2 import ListValue, Struct
 
-    if isinstance(part1, int):
+    if (
+        not isinstance(part1, int)
+        and isinstance(_dict, (dict, Struct, MutableMapping))
+        and part1 in _dict
+        or isinstance(part1, int)
+        or not isinstance(_dict, (dict, Struct, MutableMapping))
+        and isinstance(_dict, (Iterable, ListValue))
+    ):
         result = _dict[part1]
     elif isinstance(_dict, (dict, Struct, MutableMapping)):
-        if part1 in _dict:
-            result = _dict[part1]
-        else:
-            result = None
-    elif isinstance(_dict, (Iterable, ListValue)):
-        result = _dict[part1]
+        result = None
     else:
         result = getattr(_dict, part1)
 
@@ -1519,11 +1498,10 @@ def get_request_header() -> Dict:
     """
     metas, envs = get_full_version()
 
-    header = {
+    return {
         **{f'jinameta-{k}': str(v) for k, v in metas.items()},
         **envs,
     }
-    return header
 
 
 def get_rich_console():
@@ -1565,8 +1543,8 @@ def parse_client(kwargs) -> Namespace:
 
 
 def _parse_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-    if 'host' in kwargs.keys():
-        return_scheme = dict()
+    if 'host' in kwargs:
+        return_scheme = {}
         (
             kwargs['host'],
             return_scheme['port'],
@@ -1580,7 +1558,7 @@ def _parse_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
                     raise ValueError(
                         f"You can't have two definitions of {key}: you have one in the host scheme and one in the keyword argument"
                     )
-                elif value:
+                else:
                     kwargs[key] = value
 
     kwargs = _delete_host_slash(kwargs)
@@ -1589,9 +1567,8 @@ def _parse_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _delete_host_slash(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-    if 'host' in kwargs:
-        if kwargs['host'][-1] == '/':
-            kwargs['host'] = kwargs['host'][:-1]
+    if 'host' in kwargs and kwargs['host'][-1] == '/':
+        kwargs['host'] = kwargs['host'][:-1]
     return kwargs
 
 
@@ -1625,23 +1602,22 @@ def _parse_url(host):
 
 def _single_port_free(host: str, port: int) -> bool:
     with socket(AF_INET, SOCK_STREAM) as session:
-        if session.connect_ex((host, port)) == 0:
-            return False
-        else:
-            return True
+        return session.connect_ex((host, port)) != 0
 
 
 def is_port_free(host: Union[str, List[str]], port: Union[int, List[int]]) -> bool:
     if isinstance(port, list):
-        if isinstance(host, str):
-            return all([_single_port_free(host, _p) for _p in port])
-        else:
-            return all([all([_single_port_free(_h, _p) for _p in port]) for _h in host])
+        return (
+            all(_single_port_free(host, _p) for _p in port)
+            if isinstance(host, str)
+            else all(
+                all(_single_port_free(_h, _p) for _p in port) for _h in host
+            )
+        )
+    if isinstance(host, str):
+        return _single_port_free(host, port)
     else:
-        if isinstance(host, str):
-            return _single_port_free(host, port)
-        else:
-            return all([_single_port_free(_h, port) for _h in host])
+        return all(_single_port_free(_h, port) for _h in host)
 
 
 def send_telemetry_event(event: str, obj_cls_name: Any, **kwargs) -> None:

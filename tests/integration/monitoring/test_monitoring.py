@@ -101,12 +101,12 @@ def test_monitoring_head(port_generator, executor):
 
     assert f._deployment_nodes['executor0'].head_port_monitoring == port_head
 
-    unique_port_exposed = set(
-        [
-            pod[0].port_monitoring
-            for key, pod in f._deployment_nodes['executor0'].pod_args['pods'].items()
-        ]
-    )
+    unique_port_exposed = {
+        pod[0].port_monitoring
+        for key, pod in f._deployment_nodes['executor0']
+        .pod_args['pods']
+        .items()
+    }
 
     assert unique_port_exposed == set(port_shards_list)
     with f:
@@ -133,12 +133,12 @@ def test_monitoring_head_few_port(port_generator, executor):
 
     assert f._deployment_nodes['executor0'].head_port_monitoring == port2
 
-    unique_port_exposed = set(
-        [
-            pod[0].port_monitoring
-            for key, pod in f._deployment_nodes['executor0'].pod_args['pods'].items()
-        ]
-    )
+    unique_port_exposed = {
+        pod[0].port_monitoring
+        for key, pod in f._deployment_nodes['executor0']
+        .pod_args['pods']
+        .items()
+    }
     with f:
         for port in [port2, port1]:
             resp = req.get(f'http://localhost:{port}/')
@@ -169,14 +169,12 @@ def test_monitoring_replicas_and_shards(port_generator, executor, protocol):
 
     assert f._deployment_nodes['executor0'].head_port_monitoring == port_head
 
-    unique_port_exposed = set(
-        [
-            pod.port_monitoring
-            for _, deployment in f._deployment_nodes.items()
-            for _, list_pod in deployment.pod_args['pods'].items()
-            for pod in list_pod
-        ]
-    )
+    unique_port_exposed = {
+        pod.port_monitoring
+        for _, deployment in f._deployment_nodes.items()
+        for _, list_pod in deployment.pod_args['pods'].items()
+        for pod in list_pod
+    }
 
     assert unique_port_exposed == set(port_shards_list)
 

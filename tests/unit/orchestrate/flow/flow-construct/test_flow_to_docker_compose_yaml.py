@@ -351,8 +351,9 @@ def test_docker_compose_set_volume(tmpdir):
     assert services['executor0']['volumes'][0].endswith(':/app')
     assert '--workspace' in services['executor0']['command']
     wsp_index = services['executor0']['command'].index('--workspace') + 1
-    assert services['executor0']['command'][wsp_index] == '/app/' + os.path.relpath(
-        path=default_workspace, start=Path.home()
+    assert (
+        services['executor0']['command'][wsp_index]
+        == f'/app/{os.path.relpath(path=default_workspace, start=Path.home())}'
     )
 
     # check default volume, but respect custom workspace

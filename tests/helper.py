@@ -8,7 +8,7 @@ class ProcessExecutor(Executor):
     @requests(on='/')
     def process(self, docs: DocumentArray, **kwargs):
         for doc in docs:
-            doc.text = doc.text + 'world'
+            doc.text = f'{doc.text}world'
             doc.tags['processed'] = True
 
 

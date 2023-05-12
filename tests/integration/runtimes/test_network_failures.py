@@ -71,7 +71,7 @@ def _check_all_replicas_connected(num_replicas, gateway_port, protocol):
     """check if all replicas are connected"""
     exec_ids = set()
     exec_id_list = []
-    for i in range(num_replicas + 1):
+    for _ in range(num_replicas + 1):
         id_ = _send_request(gateway_port, protocol, request_size=2)[0].text
         exec_ids.add(id_)
         exec_id_list.append(id_)
@@ -465,9 +465,7 @@ async def test_runtimes_replicas(
     worker_processes[0].join()
 
     try:
-        for _ in range(
-            len(worker_ports)
-        ):  # make sure all workers are targeted by round robin
+        for _ in worker_ports:
             # ----------- 1. test that useful errors are given -----------
             # we have to do this in a new process because otherwise grpc will be sad and everything will crash :(
             p = multiprocessing.Process(

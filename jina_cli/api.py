@@ -76,10 +76,7 @@ def executor(args: 'Namespace'):
     args.host = args.host[0]
     args.port_monitoring = args.port_monitoring[0]
 
-    if args.native:
-        return executor_native(args)
-    else:
-        return pod(args)
+    return executor_native(args) if args.native else pod(args)
 
 
 def gateway(args: 'Namespace'):
@@ -95,7 +92,7 @@ def gateway(args: 'Namespace'):
     _update_gateway_args(args)
 
     with AsyncNewLoopRuntime(args, req_handler_cls=GatewayRequestHandler) as runtime:
-        runtime.logger.info(f'Gateway started')
+        runtime.logger.info('Gateway started')
         runtime.run_forever()
 
 

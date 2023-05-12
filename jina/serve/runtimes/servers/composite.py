@@ -45,27 +45,22 @@ class CompositeServer(BaseServer):
         """
         setup GRPC server
         """
-        tasks = []
-        for server in self.servers:
-            tasks.append(asyncio.create_task(server.setup_server()))
-
+        tasks = [asyncio.create_task(server.setup_server()) for server in self.servers]
         await asyncio.gather(*tasks)
 
     async def shutdown(self):
         """Free other resources allocated with the server, e.g, gateway object, ..."""
         await super().shutdown()
-        shutdown_tasks = []
-        for server in self.servers:
-            shutdown_tasks.append(asyncio.create_task(server.shutdown()))
-
+        shutdown_tasks = [
+            asyncio.create_task(server.shutdown()) for server in self.servers
+        ]
         await asyncio.gather(*shutdown_tasks)
 
     async def run_server(self):
         """Run GRPC server forever"""
-        run_server_tasks = []
-        for server in self.servers:
-            run_server_tasks.append(asyncio.create_task(server.run_server()))
-
+        run_server_tasks = [
+            asyncio.create_task(server.run_server()) for server in self.servers
+        ]
         await asyncio.gather(*run_server_tasks)
 
     @staticmethod
@@ -77,11 +72,7 @@ class CompositeServer(BaseServer):
         :return: the copied object
         """
 
-        memo = {}
-        for k in ignore_attrs:
-            if hasattr(obj, k):
-                memo[id(getattr(obj, k))] = None  # getattr(obj, k)
-
+        memo = {id(getattr(obj, k)): None for k in ignore_attrs if hasattr(obj, k)}
         return copy.deepcopy(obj, memo)
 
     @property

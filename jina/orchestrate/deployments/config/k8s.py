@@ -278,50 +278,48 @@ class K8sDeploymentConfig:
         uses_before = getattr(args, 'uses_before', None)
         uses_after = getattr(args, 'uses_after', None)
 
-        if args.name != 'gateway':
-            # head deployment only exists for sharded deployments
-            if shards > 1:
-                parsed_args['head_deployment'] = Deployment._copy_to_head_args(
-                    self.args
+        if args.name != 'gateway' and shards > 1:
+            parsed_args['head_deployment'] = Deployment._copy_to_head_args(
+                self.args
+            )
+            parsed_args['head_deployment'].gpus = None
+            parsed_args['head_deployment'].port = k8s_port
+            parsed_args[
+                'head_deployment'
+            ].port_monitoring = GrpcConnectionPool.K8S_PORT_MONITORING
+            parsed_args['head_deployment'].uses = None
+            parsed_args['head_deployment'].uses_metas = None
+            parsed_args['head_deployment'].uses_with = None
+
+            import json
+
+            connection_list = {}
+            for i in range(shards):
+                name = (
+                    f'{to_compatible_name(self.name)}-{i}'
+                    if shards > 1
+                    else f'{to_compatible_name(self.name)}'
                 )
-                parsed_args['head_deployment'].gpus = None
-                parsed_args['head_deployment'].port = k8s_port
+                connection_list[
+                    str(i)
+                ] = f'{name}.{self.k8s_namespace}.svc:{k8s_port}'
+
+            parsed_args['head_deployment'].connection_list = json.dumps(
+                connection_list
+            )
+
+            if uses_before:
                 parsed_args[
                     'head_deployment'
-                ].port_monitoring = GrpcConnectionPool.K8S_PORT_MONITORING
-                parsed_args['head_deployment'].uses = None
-                parsed_args['head_deployment'].uses_metas = None
-                parsed_args['head_deployment'].uses_with = None
-
-                import json
-
-                connection_list = {}
-                for i in range(shards):
-                    name = (
-                        f'{to_compatible_name(self.name)}-{i}'
-                        if shards > 1
-                        else f'{to_compatible_name(self.name)}'
-                    )
-                    connection_list[
-                        str(i)
-                    ] = f'{name}.{self.k8s_namespace}.svc:{k8s_port}'
-
-                parsed_args['head_deployment'].connection_list = json.dumps(
-                    connection_list
+                ].uses_before_address = (
+                    f'127.0.0.1:{GrpcConnectionPool.K8S_PORT_USES_BEFORE}'
                 )
-
-                if uses_before:
-                    parsed_args[
-                        'head_deployment'
-                    ].uses_before_address = (
-                        f'127.0.0.1:{GrpcConnectionPool.K8S_PORT_USES_BEFORE}'
-                    )
-                if uses_after:
-                    parsed_args[
-                        'head_deployment'
-                    ].uses_after_address = (
-                        f'127.0.0.1:{GrpcConnectionPool.K8S_PORT_USES_AFTER}'
-                    )
+            if uses_after:
+                parsed_args[
+                    'head_deployment'
+                ].uses_after_address = (
+                    f'127.0.0.1:{GrpcConnectionPool.K8S_PORT_USES_AFTER}'
+                )
 
         for i in range(shards):
             cargs = copy.deepcopy(args)
@@ -358,17 +356,16 @@ class K8sDeploymentConfig:
                     self.worker_deployments[0].get_gateway_yamls(),
                 )
             ]
-        else:
-            deployments = []
-            if self.head_deployment:
-                deployments.append(self.head_deployment)
-            deployments.extend(self.worker_deployments)
-            return [
-                (
-                    deployment.dns_name,
-                    deployment.get_runtime_yamls(k8s_port=self.k8s_port),
-                )
-                for deployment in deployments
-            ]
+        deployments = []
+        if self.head_deployment:
+            deployments.append(self.head_deployment)
+        deployments.extend(self.worker_deployments)
+        return [
+            (
+                deployment.dns_name,
+                deployment.get_runtime_yamls(k8s_port=self.k8s_port),
+            )
+            for deployment in deployments
+        ]
 
     to_k8s_yaml = to_kubernetes_yaml

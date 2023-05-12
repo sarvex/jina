@@ -48,7 +48,7 @@ env_var_deprecated_regex = re.compile(
     r'\$[a-zA-Z0-9_]*'
 )  # matches expressions of form '$var'
 
-env_var_regex_str = env_var_deprecated_regex_str + '|' + new_env_regex_str
+env_var_regex_str = f'{env_var_deprecated_regex_str}|{new_env_regex_str}'
 env_var_regex = re.compile(env_var_regex_str)  # matches either of the above
 
 yaml_ref_regex = re.compile(
@@ -224,11 +224,11 @@ class JAML:
 
         :return: tags
         """
-        return list(
+        return [
             v[1:]
             for v in set(JinaLoader.yaml_constructors.keys())
             if v and v.startswith('!')
-        )
+        ]
 
     @staticmethod
     def registered_classes() -> Dict:
@@ -251,7 +251,7 @@ class JAML:
         :return: class object from tag
         """
         if not tag.startswith('!'):
-            tag = '!' + tag
+            tag = f'!{tag}'
         bound = JinaLoader.yaml_constructors.get(tag, None)
         return bound.__self__ if bound else None
 
@@ -264,7 +264,7 @@ class JAML:
         :param kwargs: other kwargs
         :return: the Python object
         """
-        safe_yml = JAML.escape('\n'.join(v for v in stream))
+        safe_yml = JAML.escape('\n'.join(stream))
         return JAML.load(safe_yml, **kwargs)
 
     @staticmethod
@@ -296,7 +296,7 @@ class JAML:
                         p.__dict__[k] = SimpleNamespace()
                         _scan(v, p.__dict__[k])
                     elif isinstance(v, list):
-                        p.__dict__[k] = list()
+                        p.__dict__[k] = []
                         _scan(v, p.__dict__[k])
                     else:
                         p.__dict__[k] = v
@@ -306,7 +306,7 @@ class JAML:
                         p.append(SimpleNamespace())
                         _scan(v, p[idx])
                     elif isinstance(v, list):
-                        p.append(list())
+                        p.append([])
                         _scan(v, p[idx])
                     else:
                         p.append(v)
@@ -336,7 +336,7 @@ class JAML:
 
         def _var_to_substitutable(v, exp=context_var_regex):
             def repl_fn(matchobj):
-                return '$$' + matchobj.group(0)[4:-3]
+                return f'$${matchobj.group(0)[4:-3]}'
 
             return re.sub(exp, repl_fn, v)
 
@@ -478,7 +478,7 @@ class JAML:
         :param cls: the class to register
         :return: the registered class
         """
-        tag = getattr(cls, 'yaml_tag', '!' + cls.__name__)
+        tag = getattr(cls, 'yaml_tag', f'!{cls.__name__}')
 
         try:
             yaml.add_representer(cls, cls._to_yaml)
@@ -558,7 +558,7 @@ class JAMLCompatible(metaclass=JAMLCompatibleType):
         config_dict_with_jtype = {
             'jtype': cls.__name__
         }  # specifies the type of Jina object that is represented
-        config_dict_with_jtype.update(config_dict)
+        config_dict_with_jtype |= config_dict
         # To maintain compatibility with off-the-shelf parsers we don't want any tags ('!...') to show up in the output
         # Since pyyaml insists on receiving a tag, we need to pass the default map tag. This won't show up in the output
         return representer.represent_mapping(
@@ -680,11 +680,7 @@ class JAMLCompatible(metaclass=JAMLCompatibleType):
         :return: :class:`JAMLCompatible` object
         """
         if runtime_args:
-            kwargs[
-                'runtimes_args'
-            ] = (
-                dict()
-            )  # when we have runtime args it is needed to have an empty runtime args session in the yam config
+            kwargs['runtimes_args'] = {}
 
         if py_modules:
             kwargs['runtimes_args']['py_modules'] = py_modules

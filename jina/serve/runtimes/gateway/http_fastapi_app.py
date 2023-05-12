@@ -154,15 +154,15 @@ def get_fastapi_app(
             return {'jina': version, 'envs': env_info}
 
         @app.post(
-            path='/post',
-            summary='Post a data request to some endpoint',
-            response_model=JinaResponseModel,
-            tags=['Debug']
-            # do not add response_model here, this debug endpoint should not restricts the response model
-        )
+                    path='/post',
+                    summary='Post a data request to some endpoint',
+                    response_model=JinaResponseModel,
+                    tags=['Debug']
+                    # do not add response_model here, this debug endpoint should not restricts the response model
+                )
         async def post(
-            body: JinaEndpointRequestModel, response: Response
-        ):  # 'response' is a FastAPI response, not a Jina response
+                    body: JinaEndpointRequestModel, response: Response
+                ):    # 'response' is a FastAPI response, not a Jina response
             """
             Post a data request to some endpoint.
 
@@ -194,10 +194,10 @@ def get_fastapi_app(
             except InternalNetworkError as err:
                 import grpc
 
-                if (
-                    err.code() == grpc.StatusCode.UNAVAILABLE
-                    or err.code() == grpc.StatusCode.NOT_FOUND
-                ):
+                if err.code() in [
+                    grpc.StatusCode.UNAVAILABLE,
+                    grpc.StatusCode.NOT_FOUND,
+                ]:
                     response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
                 elif err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                     response.status_code = status.HTTP_504_GATEWAY_TIMEOUT

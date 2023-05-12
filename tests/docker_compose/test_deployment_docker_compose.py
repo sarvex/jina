@@ -31,7 +31,7 @@ async def run_test(port, endpoint, num_docs=10, request_size=10):
 
 @pytest.fixture()
 def deployment_with_replicas_with_sharding(docker_images, polling):
-    deployment = Deployment(
+    return Deployment(
         name='test_executor_replicas_sharding',
         port=9090,
         shards=2,
@@ -40,50 +40,45 @@ def deployment_with_replicas_with_sharding(docker_images, polling):
         uses_after=f'docker://{docker_images[1]}',
         polling=polling,
     )
-    return deployment
 
 
 @pytest.fixture()
 def deployment_without_replicas_without_sharding(docker_images):
-    deployment = Deployment(
+    return Deployment(
         name='test_executor',
         port=9090,
         uses=f'docker://{docker_images[0]}',
     )
-    return deployment
 
 
 @pytest.fixture()
 def deployment_with_replicas_without_sharding(docker_images):
-    deployment = Deployment(
+    return Deployment(
         name='test_executor_replicas',
         port=9090,
         replicas=2,
         uses=f'docker://{docker_images[0]}',
     )
-    return deployment
 
 
 @pytest.fixture()
 def deployment_without_replicas_with_sharding(docker_images):
-    deployment = Deployment(
+    return Deployment(
         name='test_executor_sharding',
         port=9090,
         shards=2,
         uses=f'docker://{docker_images[0]}',
     )
-    return deployment
 
 
 @pytest.fixture
 def deployment_configmap(docker_images):
-    deployment = Deployment(
+    return Deployment(
         port=9091,
         name='test_executor_configmap',
         uses=f'docker://{docker_images[0]}',
         env={'k1': 'v1', 'k2': 'v2'},
     )
-    return deployment
 
 
 @pytest.mark.asyncio
@@ -145,20 +140,16 @@ async def test_deployment_with_replicas_with_sharding(deployment_with_replicas_w
             assert set(doc.tags['shard_id']) == {0, 1}
             assert doc.tags['parallel'] == [2, 2]
             assert doc.tags['shards'] == [2, 2]
-            for executor in doc.tags['traversed-executors']:
-                if executor in runtimes_to_visit:
-                    runtimes_to_visit.remove(executor)
         else:
             assert len(set(doc.tags['traversed-executors'])) == 1
             assert len(set(doc.tags['shard_id'])) == 1
             assert 0 in set(doc.tags['shard_id']) or 1 in set(doc.tags['shard_id'])
             assert doc.tags['parallel'] == [2]
             assert doc.tags['shards'] == [2]
-            for executor in doc.tags['traversed-executors']:
-                if executor in runtimes_to_visit:
-                    runtimes_to_visit.remove(executor)
-
-    assert len(runtimes_to_visit) == 0
+        for executor in doc.tags['traversed-executors']:
+            if executor in runtimes_to_visit:
+                runtimes_to_visit.remove(executor)
+    assert not runtimes_to_visit
 
 
 @pytest.mark.timeout(3600)
@@ -190,20 +181,12 @@ async def test_deployment_without_replicas_with_sharding(deployment_without_repl
     }
 
     for doc in docs:
-        if polling == 'ALL':
-            assert doc.tags['parallel'] == 1
-            assert doc.tags['shards'] == 2
-            for executor in doc.tags['traversed-executors']:
-                if executor in runtimes_to_visit:
-                    runtimes_to_visit.remove(executor)
-        else:
-            assert doc.tags['parallel'] == 1
-            assert doc.tags['shards'] == 2
-            for executor in doc.tags['traversed-executors']:
-                if executor in runtimes_to_visit:
-                    runtimes_to_visit.remove(executor)
-
-    assert len(runtimes_to_visit) == 0
+        for executor in doc.tags['traversed-executors']:
+            if executor in runtimes_to_visit:
+                runtimes_to_visit.remove(executor)
+        assert doc.tags['shards'] == 2
+        assert doc.tags['parallel'] == 1
+    assert not runtimes_to_visit
 
 
 @pytest.mark.timeout(3600)
@@ -241,7 +224,7 @@ async def test_deployment_with_replicas_without_sharding(deployment_with_replica
             if executor in runtimes_to_visit:
                 runtimes_to_visit.remove(executor)
 
-    assert len(runtimes_to_visit) == 0
+    assert not runtimes_to_visit
 
 
 @pytest.mark.timeout(3600)
@@ -278,7 +261,7 @@ async def test_deployment_without_replicas_without_sharding(deployment_without_r
             if executor in runtimes_to_visit:
                 runtimes_to_visit.remove(executor)
 
-    assert len(runtimes_to_visit) == 0
+    assert not runtimes_to_visit
 
 
 

@@ -48,7 +48,7 @@ def _new_doc_from_data(
             if docarray_v2
             else (Document.from_dict(data), DataInputType.DICT)
         )
-    if data_type == DataInputType.AUTO or data_type == DataInputType.DOCUMENT:
+    if data_type in [DataInputType.AUTO, DataInputType.DOCUMENT]:
         if isinstance(data, Document):
             # if incoming is already primitive type Document, then all good, best practice!
             return data, DataInputType.DOCUMENT

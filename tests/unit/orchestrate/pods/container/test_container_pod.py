@@ -96,7 +96,7 @@ def test_container_pod_volume_setting(
 ):
     if expected_source:
         expected_source = os.path.join(tmpdir, expected_source)
-        volume_arg = str(expected_source) + ':' + expected_destination
+        volume_arg = f'{str(expected_source)}:{expected_destination}'
         pod_args.append(volume_arg)
 
     default_workspace = __cache_path__

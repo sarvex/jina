@@ -21,10 +21,12 @@ def namespace_equal(
     """
     if n1 is None and n2 is None:
         return True
-    for attr in filter(lambda x: x not in skip_attr and not x.startswith('_'), dir(n1)):
-        if not getattr(n1, attr) == getattr(n2, attr):
-            return False
-    return True
+    return all(
+        getattr(n1, attr) == getattr(n2, attr)
+        for attr in filter(
+            lambda x: x not in skip_attr and not x.startswith('_'), dir(n1)
+        )
+    )
 
 
 @pytest.mark.parametrize('shards', [1, 5])
@@ -247,7 +249,7 @@ def test_deployments(name: str, shards: str, gpus):
     deployment_config = K8sDeploymentConfig(args, 'ns')
     args.host = args.host[0]
 
-    if name != 'gateway' and int(shards) > int(1):
+    if name != 'gateway' and int(shards) > 1:
         head_deployment = deployment_config.head_deployment
         assert head_deployment.deployment_args.gpus is None
 

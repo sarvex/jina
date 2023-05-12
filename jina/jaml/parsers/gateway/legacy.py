@@ -70,7 +70,7 @@ class GatewayLegacyParser(BaseLegacyParser):
         :param data: versioned gateway object
         :return: the dictionary given a versioned gateway object
         """
-        a = {k: v for k, v in data._init_kwargs_dict.items()}
+        a = dict(data._init_kwargs_dict.items())
         r = {}
         if a:
             r['with'] = a

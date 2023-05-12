@@ -15,8 +15,7 @@ NUM_CLIENTS = 3
 
 @pytest.fixture()
 def gateway_port():
-    port = random_port()
-    yield port
+    yield random_port()
 
 
 class DummyExecutor(Executor):
@@ -35,7 +34,7 @@ def ws_flow(start_event, stop_event, gateway_port):
 
 
 def input_da_gen():
-    for i in range(5):
+    for _ in range(5):
         yield DocumentArray.empty(INPUT_DA_LEN)
         time.sleep(1)
 

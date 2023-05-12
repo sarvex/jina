@@ -24,7 +24,7 @@ def get_deprecated_replacement(dep_arg: str) -> str:
         if '-' in dep_arg:
             new_argument = new_argument.replace('_', '-')
         if dep_arg.startswith('--'):
-            new_argument = '--' + new_argument
+            new_argument = f'--{new_argument}'
         elif dep_arg.startswith('-'):
-            new_argument = '-' + new_argument
+            new_argument = f'-{new_argument}'
         return new_argument

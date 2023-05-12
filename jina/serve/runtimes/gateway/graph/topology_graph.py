@@ -154,14 +154,17 @@ class TopologyGraph:
                         ]
 
                     # avoid sending to executor which does not bind to this endpoint
-                    if endpoint is not None and executor_endpoint_mapping is not None:
-                        if (
+                    if (
+                        endpoint is not None
+                        and executor_endpoint_mapping is not None
+                        and (
                             self.name in executor_endpoint_mapping
                             and endpoint not in executor_endpoint_mapping[self.name]
                             and __default_endpoint__
                             not in executor_endpoint_mapping[self.name]
-                        ):
-                            return request, metadata
+                        )
+                    ):
+                        return request, metadata
 
                     if target_executor_pattern is not None and not re.match(
                         target_executor_pattern, self.name
@@ -455,5 +458,5 @@ class TopologyGraph:
         res = {}
         for node in self.all_nodes:
             if node.result_in_params_returned:
-                res.update(node.result_in_params_returned)
+                res |= node.result_in_params_returned
         return res

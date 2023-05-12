@@ -57,7 +57,7 @@ async def create_all_flow_deployments_and_wait_ready(
 
     # wait for all the pods to be up
     resp = app_client.list_namespaced_deployment(namespace=namespace)
-    deployment_names = set([item.metadata.name for item in resp.items])
+    deployment_names = {item.metadata.name for item in resp.items}
     assert deployment_names == {
         'gateway',
         'slow-process-executor',
@@ -66,7 +66,7 @@ async def create_all_flow_deployments_and_wait_ready(
         'gateway': 1,
         'slow-process-executor': 3,
     }
-    while len(deployment_names) > 0:
+    while deployment_names:
         deployments_ready = []
         for deployment_name in deployment_names:
             api_response = app_client.read_namespaced_deployment(
@@ -172,15 +172,15 @@ async def test_no_message_lost_during_scaling(logger, docker_images, tmpdir):
     import portforward
 
     with portforward.forward(
-        namespace, gateway_pod_name, flow.port, flow.port, config_path
-    ):
+            namespace, gateway_pod_name, flow.port, flow.port, config_path
+        ):
         # send requests and validate
         time.sleep(0.1)
         client_kwargs = dict(
             host='localhost',
             port=flow.port,
         )
-        client_kwargs.update(flow._common_kwargs)
+        client_kwargs |= flow._common_kwargs
 
         stop_event = multiprocessing.Event()
         scale_event = multiprocessing.Event()
@@ -210,8 +210,7 @@ async def test_no_message_lost_during_scaling(logger, docker_images, tmpdir):
         # wait for replicas to be dead
         while True:
             pods = core_client.list_namespaced_pod(
-                namespace=namespace,
-                label_selector=f'app=slow-process-executor',
+                namespace=namespace, label_selector='app=slow-process-executor'
             )
             if len(pods.items) == 1:
                 # still continue for a bit to hit the new replica only
@@ -263,7 +262,7 @@ async def test_no_message_lost_during_kill(logger, docker_images, tmpdir):
     )
 
     # start port forwarding
-    logger.debug(f' Start port forwarding')
+    logger.debug(' Start port forwarding')
     gateway_pod_name = (
         core_client.list_namespaced_pod(
             namespace=namespace, label_selector='app=gateway'
@@ -275,15 +274,15 @@ async def test_no_message_lost_during_kill(logger, docker_images, tmpdir):
     import portforward
 
     with portforward.forward(
-        namespace, gateway_pod_name, flow.port, flow.port, config_path
-    ):
+            namespace, gateway_pod_name, flow.port, flow.port, config_path
+        ):
         # send requests and validate
         time.sleep(0.1)
         client_kwargs = dict(
             host='localhost',
             port=flow.port,
         )
-        client_kwargs.update(flow._common_kwargs)
+        client_kwargs |= flow._common_kwargs
 
         stop_event = multiprocessing.Event()
         scale_event = multiprocessing.Event()
@@ -306,8 +305,7 @@ async def test_no_message_lost_during_kill(logger, docker_images, tmpdir):
         logger.debug('Kill 2 replicas')
 
         pods = core_client.list_namespaced_pod(
-            namespace=namespace,
-            label_selector=f'app=slow-process-executor',
+            namespace=namespace, label_selector='app=slow-process-executor'
         )
 
         names = [item.metadata.name for item in pods.items]
@@ -318,8 +316,7 @@ async def test_no_message_lost_during_kill(logger, docker_images, tmpdir):
         # wait for replicas to be dead
         while True:
             pods = core_client.list_namespaced_pod(
-                namespace=namespace,
-                label_selector=f'app=slow-process-executor',
+                namespace=namespace, label_selector='app=slow-process-executor'
             )
             current_pod_names = [item.metadata.name for item in pods.items]
             if names[0] not in current_pod_names and names[1] not in current_pod_names:
@@ -372,7 +369,7 @@ async def test_linear_processing_time_scaling(docker_images, logger, tmpdir):
     )
 
     # start port forwarding
-    logger.debug(f' Start port forwarding')
+    logger.debug(' Start port forwarding')
     gateway_pod_name = (
         core_client.list_namespaced_pod(
             namespace=namespace, label_selector='app=gateway'
@@ -384,14 +381,14 @@ async def test_linear_processing_time_scaling(docker_images, logger, tmpdir):
     import portforward
 
     with portforward.forward(
-        namespace, gateway_pod_name, flow.port, flow.port, config_path
-    ):
+            namespace, gateway_pod_name, flow.port, flow.port, config_path
+        ):
         time.sleep(0.1)
         client_kwargs = dict(
             host='localhost',
             port=flow.port,
         )
-        client_kwargs.update(flow._common_kwargs)
+        client_kwargs |= flow._common_kwargs
 
         stop_event = multiprocessing.Event()
         scale_event = multiprocessing.Event()

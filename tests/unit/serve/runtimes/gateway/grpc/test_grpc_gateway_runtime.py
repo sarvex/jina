@@ -134,8 +134,8 @@ class DummyMockConnectionPool:
         response_msg = copy.deepcopy(requests[0])
         new_docs = DocumentArray()
         for doc in requests[0].docs:
-            clientid = doc.text[0:7]
-            new_doc = Document(id=doc.id, text=doc.text + f'-{clientid}-{deployment}')
+            clientid = doc.text[:7]
+            new_doc = Document(id=doc.id, text=f'{doc.text}-{clientid}-{deployment}')
             new_docs.append(new_doc)
 
         response_msg.data.docs = new_docs
@@ -214,7 +214,7 @@ def test_grpc_gateway_runtime_handle_messages_linear(
         assert len(responses[0].docs) == 1
         assert (
             responses[0].docs[0].text
-            == f'client0-Request-client0-deployment0-client0-deployment1-client0-deployment2-client0-deployment3'
+            == 'client0-Request-client0-deployment0-client0-deployment1-client0-deployment2-client0-deployment3'
         )
 
     p = Process(target=process_wrapper)
@@ -259,12 +259,10 @@ def test_grpc_gateway_runtime_handle_messages_bifurcation(
 
         assert len(responses) > 0
         assert len(responses[0].docs) == 1
-        assert (
-            responses[0].docs[0].text
-            == f'client0-Request-client0-deployment0-client0-deployment2-client0-deployment3'
-            or responses[0].docs[0].text
-            == f'client0-Request-client0-deployment4-client0-deployment5'
-        )
+        assert responses[0].docs[0].text in [
+            'client0-Request-client0-deployment0-client0-deployment2-client0-deployment3',
+            'client0-Request-client0-deployment4-client0-deployment5',
+        ]
 
     p = Process(target=process_wrapper)
     p.start()
@@ -457,7 +455,7 @@ def test_grpc_gateway_runtime_handle_empty_graph(stream):
 
         assert len(responses) > 0
         assert len(responses[0].docs) == 1
-        assert responses[0].docs[0].text == f'client0-Request'
+        assert responses[0].docs[0].text == 'client0-Request'
 
     p = Process(target=process_wrapper)
     p.start()

@@ -332,11 +332,11 @@ def _search_first_and_last_prefix_occurrence(
     first_idx, last_idx = None, None
     for idx, value in enumerate(search_list):
         if value.startswith(search_prefix):
-            if not first_idx:
-                first_idx = idx
-            else:
+            if first_idx:
                 last_idx = idx
 
+            else:
+                first_idx = idx
     return first_idx, last_idx
 
 

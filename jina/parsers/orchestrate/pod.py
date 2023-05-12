@@ -176,7 +176,7 @@ def mixin_pod_runtime_args_parser(arg_group, pod_type='worker'):
         default=[random_port()],
         action=CastToIntAction,
         dest='port_monitoring',
-        help=f'The port on which the prometheus server is exposed, default is a random port between [49152, 65535]',
+        help='The port on which the prometheus server is exposed, default is a random port between [49152, 65535]',
     )
 
     arg_group.add_argument(
@@ -184,7 +184,7 @@ def mixin_pod_runtime_args_parser(arg_group, pod_type='worker'):
         type=int,
         default=-1,
         dest='retries',
-        help=f'Number of retries per gRPC call. If <0 it defaults to max(3, num_replicas)',
+        help='Number of retries per gRPC call. If <0 it defaults to max(3, num_replicas)',
     )
 
     arg_group.add_argument(

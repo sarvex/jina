@@ -28,7 +28,7 @@ def temp_workspace(tmpdir):
 
 @pytest.fixture
 def shuffle_flow(request, temp_workspace):
-    f = (
+    return (
         Flow()
         .add(name='first')
         .add(
@@ -51,18 +51,19 @@ def shuffle_flow(request, temp_workspace):
             name='exec2',
             workspace=os.environ['TEMP_WORKSPACE'],
             needs='first',
-            when={'$or': {'tags__second': {'$eq': 1}, 'tags__fifth': {'$eq': 1}}},
+            when={
+                '$or': {'tags__second': {'$eq': 1}, 'tags__fifth': {'$eq': 1}}
+            },
         )
         .needs_all('joiner')
     )
-    return f
 
 
 @pytest.fixture
 def flow(request, temp_workspace):
     source = request.param
-    if source == 'python':
-        f = (
+    return (
+        (
             Flow()
             .add(name='first')
             .add(
@@ -83,9 +84,9 @@ def flow(request, temp_workspace):
             )
             .needs_all('joiner')
         )
-    else:
-        f = Flow.load_config(os.path.join(cur_dir, 'flow.yml'))
-    return f
+        if source == 'python'
+        else Flow.load_config(os.path.join(cur_dir, 'flow.yml'))
+    )
 
 
 @pytest.mark.parametrize('flow', ['python', 'yaml'], indirect=True)
@@ -112,10 +113,10 @@ def test_conditions_filtering(tmpdir, flow):
 
         assert types_set == {1, 2}
 
-    with open(os.path.join(str(tmpdir), 'exec1', '0', f'exec1.txt'), 'r') as fp:
+    with open(os.path.join(str(tmpdir), 'exec1', '0', 'exec1.txt'), 'r') as fp:
         assert fp.read() == 'type1'
 
-    with open(os.path.join(str(tmpdir), 'exec2', '0', f'exec2.txt'), 'r') as fp:
+    with open(os.path.join(str(tmpdir), 'exec2', '0', 'exec2.txt'), 'r') as fp:
         assert fp.read() == 'type2'
 
 
@@ -151,16 +152,10 @@ def test_conditions_filtering_on_joiner(tmpdir):
         )
         assert len(ret) == 0
 
-    with open(
-        os.path.join(str(tmpdir), 'joiner_test_exec1', '0', f'joiner_test_exec1.txt'),
-        'r',
-    ) as fp:
+    with open(os.path.join(str(tmpdir), 'joiner_test_exec1', '0', 'joiner_test_exec1.txt'), 'r') as fp:
         assert fp.read() == 'type1type2'
 
-    with open(
-        os.path.join(str(tmpdir), 'joiner_test_exec2', '0', f'joiner_test_exec2.txt'),
-        'r',
-    ) as fp:
+    with open(os.path.join(str(tmpdir), 'joiner_test_exec2', '0', 'joiner_test_exec2.txt'), 'r') as fp:
         assert fp.read() == 'type1type2'
 
 

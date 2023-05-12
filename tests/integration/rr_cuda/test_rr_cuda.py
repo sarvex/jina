@@ -36,6 +36,7 @@ def cuda_visible_devices(request):
     indirect=['cuda_total_devices', 'cuda_visible_devices'],
 )
 def test_cuda_assignment(cuda_total_devices, cuda_visible_devices, env):
+
     class MyCUDAUserExecutor(Executor):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -48,7 +49,7 @@ def test_cuda_assignment(cuda_total_devices, cuda_visible_devices, env):
     f = Flow().add(uses=MyCUDAUserExecutor, env=env or {}, replicas=3)
     with f:
         ret = f.post(on='/', inputs=DocumentArray.empty(50), request_size=1)
-        cuda_visible_devices = set([doc.tags['cuda_visible_devices'] for doc in ret])
+        cuda_visible_devices = {doc.tags['cuda_visible_devices'] for doc in ret}
 
     assert cuda_visible_devices == {'0', '1', '2'}
 

@@ -5,10 +5,7 @@ from jina import Deployment, Flow
 
 @pytest.mark.parametrize('options', ['{"grpc.keepalive_time_ms": 9999}', None])
 def test_grpc_channel_options(options):
-    cli_args = []
-    if options:
-        cli_args = ['--grpc-channel-options', options]
-
+    cli_args = ['--grpc-channel-options', options] if options else []
     from jina.parsers import set_client_cli_parser
 
     args = set_client_cli_parser().parse_args(cli_args)

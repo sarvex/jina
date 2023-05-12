@@ -20,7 +20,7 @@ class BatchQueue:
         self._data_lock = asyncio.Lock()
         self.func = func
         if params is None:
-            params = dict()
+            params = {}
         self._is_closed = False
         self._output_array_type = output_array_type
         self.params = params
@@ -115,12 +115,12 @@ class BatchQueue:
 
                 # Output validation
                 if isinstance(return_docs, DocumentArray):
-                    if not len(return_docs) == input_len_before_call:
+                    if len(return_docs) != input_len_before_call:
                         raise ValueError(
                             f'Dynamic Batching requires input size to equal output size. Expected output size {input_len_before_call}, but got {len(return_docs)}'
                         )
                 elif return_docs is None:
-                    if not len(self._big_doc) == input_len_before_call:
+                    if len(self._big_doc) != input_len_before_call:
                         raise ValueError(
                             f'Dynamic Batching requires input size to equal output size. Expected output size {input_len_before_call}, but got {len(self._big_doc)}'
                         )

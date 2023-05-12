@@ -7,13 +7,10 @@ def _cli_to_schema(
     api_dict,
     target,
 ):
-    deployment_api = None
-
-    for d in api_dict['methods']:
-        if d['name'] == target:
-            deployment_api = d['options']
-            break
-
+    deployment_api = next(
+        (d['options'] for d in api_dict['methods'] if d['name'] == target),
+        None,
+    )
     _schema = {
         'properties': {},
         'required': [],
@@ -79,6 +76,20 @@ def fill_overload(
         else:
             signature_str += ':'
             return_str = ''
+        doc_str = '\n'.join(
+            f'{indent}{indent}:param {k[0]}: {k[1]["description"]}' for k in a
+        )
+        noqa_str = '\n'.join(
+            f'{indent}{indent}.. # noqa: DAR{j}' for j in ['202', '101', '003']
+        )
+        final_str = f'@overload\n{indent}{signature_str}\n{indent}{indent}"""{doc_str_title}\n\n{doc_str}{return_str}\n\n{noqa_str}\n{indent}{indent}"""'
+        final_code = re.sub(
+            rf'(# overload_inject_start_{regex_tag or cli_entrypoint}).*(# overload_inject_end_{regex_tag or cli_entrypoint})',
+            f'\\1\n{indent}{final_str}\n{indent}\\2',
+            open(filepath).read(),
+            0,
+            re.DOTALL,
+        )
     else:
         cli_args = [
             f'{indent}{k[0]}: Optional[{k[1]["type"]}] = {k[1]["default_literal"]}'
@@ -92,28 +103,10 @@ def fill_overload(
         else:
             signature_str += ':'
             return_str = ''
-    if class_method:
-        doc_str = '\n'.join(
-            f'{indent}{indent}:param {k[0]}: {k[1]["description"]}' for k in a
-        )
-        noqa_str = '\n'.join(
-            f'{indent}{indent}.. # noqa: DAR{j}' for j in ['202', '101', '003']
-        )
-    else:
         doc_str = '\n'.join(f'{indent}:param {k[0]}: {k[1]["description"]}' for k in a)
         noqa_str = '\n'.join(
             f'{indent}.. # noqa: DAR{j}' for j in ['202', '101', '003']
         )
-    if class_method:
-        final_str = f'@overload\n{indent}{signature_str}\n{indent}{indent}"""{doc_str_title}\n\n{doc_str}{return_str}\n\n{noqa_str}\n{indent}{indent}"""'
-        final_code = re.sub(
-            rf'(# overload_inject_start_{regex_tag or cli_entrypoint}).*(# overload_inject_end_{regex_tag or cli_entrypoint})',
-            f'\\1\n{indent}{final_str}\n{indent}\\2',
-            open(filepath).read(),
-            0,
-            re.DOTALL,
-        )
-    else:
         final_str = f'@overload\n{signature_str}\n{indent}"""{doc_str_title}\n\n{doc_str}{return_str}\n\n{noqa_str}\n{indent}"""'
         final_code = re.sub(
             rf'(# overload_inject_start_{regex_tag or cli_entrypoint}).*(# overload_inject_end_{regex_tag or cli_entrypoint})',
@@ -163,29 +156,14 @@ def _get_docstring_title(file_str, tag):
     return doc_str_title
 
 
-def fill_implementation_stub(
-    doc_str_return,
-    return_type,
-    filepath,
-    overload_fn,
-    class_method,
-    indent=' ' * 4,
-    overload_tags=[],  # from which methods should we gather the docstrings?
-    regex_tag=None,
-    tag_to_docstring=dict(),
-    additional_params=[],  # :param: lines that do not come from the override methods, but from the implementation stub itself
-):
+def fill_implementation_stub(doc_str_return, return_type, filepath, overload_fn, class_method, indent=' ' * 4, overload_tags=[], regex_tag=None, tag_to_docstring={}, additional_params=[]):
     # collects all :param: descriptions from overload methods and adds them to the method stub that has the actual implementation
     overload_fn = overload_fn.lower()
     relevant_docstrings = [tag_to_docstring[t] for t in overload_tags]
     add_param_indent = f'{indent}{indent}' if class_method else f'{indent}'
     relevant_docstrings += [add_param_indent + p for p in additional_params]
+    doc_str = ''
     if class_method:
-        doc_str = ''
-        for i, s in enumerate(relevant_docstrings):
-            if i != 0:
-                doc_str += '\n'
-            doc_str += s
         noqa_str = '\n'.join(
             f'{indent}{indent}.. # noqa: DAR{j}' for j in ['102', '202', '101', '003']
         )
@@ -194,18 +172,14 @@ def fill_implementation_stub(
         else:
             return_str = ''
     else:
-        doc_str = ''
-        for i, s in enumerate(relevant_docstrings):
-            if i != 0:
-                doc_str += '\n'
-            doc_str += s
         noqa_str = '\n'.join(
             f'{indent}.. # noqa: DAR{j}' for j in ['102', '202', '101', '003']
         )
-        if return_type:
-            return_str = f'\n{indent}:return: {doc_str_return}'
-        else:
-            return_str = ''
+        return_str = f'\n{indent}:return: {doc_str_return}' if return_type else ''
+    for i, s in enumerate(relevant_docstrings):
+        if i != 0:
+            doc_str += '\n'
+        doc_str += s
     if class_method:
         file_str = open(filepath).read()
         doc_str_title = _get_docstring_title(file_str, regex_tag or overload_fn)
@@ -361,11 +335,11 @@ implementation_stub_entries = [
 
 
 if __name__ == '__main__':
-    tag_to_docstring = dict()
+    tag_to_docstring = {}
     all_changed_files = set()
     for d in entries:
         new_docstring = fill_overload(**d)
-        tag_to_docstring.update(new_docstring)
+        tag_to_docstring |= new_docstring
         all_changed_files.add(d['filepath'])
     for d in implementation_stub_entries:
         fill_implementation_stub(**d, tag_to_docstring=tag_to_docstring)

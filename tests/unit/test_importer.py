@@ -51,7 +51,7 @@ def test_no_suppress_other_exception():
 
 
 def test_path_importer(tmpdir):
-    tmpmodule = f'package.py'
+    tmpmodule = 'package.py'
     with open(tmpdir / tmpmodule, 'w') as f:
         f.write("raise ImportError")
 

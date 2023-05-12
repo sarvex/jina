@@ -24,15 +24,16 @@ def _include_results_field_in_param(parameters: Optional['Dict']) -> 'Dict':
 
     if parameters:
 
-        if key_result in parameters:
-            if not isinstance(parameters[key_result], dict):
-                warnings.warn(
-                    f'It looks like you passed a dictionary with the key `{key_result}` to `parameters`.'
-                    'This key is reserved, so the associated value will be deleted.'
-                )
-                parameters.update({key_result: dict()})
+        if key_result in parameters and not isinstance(
+            parameters[key_result], dict
+        ):
+            warnings.warn(
+                f'It looks like you passed a dictionary with the key `{key_result}` to `parameters`.'
+                'This key is reserved, so the associated value will be deleted.'
+            )
+            parameters.update({key_result: {}})
     else:
-        parameters = {key_result: dict()}
+        parameters = {key_result: {}}
 
     return parameters
 
@@ -232,51 +233,13 @@ class PostMixin:
         prefetch,
         **kwargs,
     ):
-        is_document_or_documentarray = isinstance(inputs, Document) or isinstance(
-            inputs, DocumentArray
-        )
+        is_document_or_documentarray = isinstance(inputs, (Document, DocumentArray))
         if (
-            is_document_or_documentarray
-            and isinstance(self.client, GRPCBaseClient)
-            and max_attempts > 1
-            and stream
+            not is_document_or_documentarray
+            or not isinstance(self.client, GRPCBaseClient)
+            or max_attempts <= 1
+            or not stream
         ):
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    return PostMixin._run_async(
-                        backoff_multiplier,
-                        exec_endpoint,
-                        func,
-                        initial_backoff,
-                        inputs,
-                        kwargs,
-                        max_attempts,
-                        max_backoff,
-                        on_always,
-                        on_done,
-                        on_error,
-                        parameters,
-                        prefetch,
-                        request_size,
-                        results_in_order,
-                        stream,
-                        target_executor,
-                    )
-                except (
-                    grpc.aio.AioRpcError,
-                    InternalNetworkError,
-                    ConnectionError,
-                ) as err:
-                    run_async(
-                        wait_or_raise_err,
-                        attempt=attempt,
-                        err=err,
-                        max_attempts=max_attempts,
-                        backoff_multiplier=backoff_multiplier,
-                        initial_backoff=initial_backoff,
-                        max_backoff=max_backoff,
-                    )
-        else:
             return PostMixin._run_async(
                 backoff_multiplier,
                 exec_endpoint,
@@ -296,6 +259,41 @@ class PostMixin:
                 stream,
                 target_executor,
             )
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return PostMixin._run_async(
+                    backoff_multiplier,
+                    exec_endpoint,
+                    func,
+                    initial_backoff,
+                    inputs,
+                    kwargs,
+                    max_attempts,
+                    max_backoff,
+                    on_always,
+                    on_done,
+                    on_error,
+                    parameters,
+                    prefetch,
+                    request_size,
+                    results_in_order,
+                    stream,
+                    target_executor,
+                )
+            except (
+                grpc.aio.AioRpcError,
+                InternalNetworkError,
+                ConnectionError,
+            ) as err:
+                run_async(
+                    wait_or_raise_err,
+                    attempt=attempt,
+                    err=err,
+                    max_attempts=max_attempts,
+                    backoff_multiplier=backoff_multiplier,
+                    initial_backoff=initial_backoff,
+                    max_backoff=max_backoff,
+                )
 
     @staticmethod
     def _run_async(

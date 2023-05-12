@@ -37,7 +37,7 @@ def image_name_tag_map():
 
 def build_docker_image(image_name, image_name_tag_map):
     logger = JinaLogger('docker-compose-testing')
-    image_tag = image_name + ':' + image_name_tag_map[image_name]
+    image_tag = f'{image_name}:{image_name_tag_map[image_name]}'
     image, build_logs = client.images.build(
         path=os.path.join(cur_dir, image_name), tag=image_tag
     )
@@ -65,10 +65,10 @@ def build_images(image_name_tag_map):
 @pytest.fixture
 def docker_images(request, image_name_tag_map):
     image_names = request.param
-    images = [
-        image_name + ':' + image_name_tag_map[image_name] for image_name in image_names
+    return [
+        f'{image_name}:{image_name_tag_map[image_name]}'
+        for image_name in image_names
     ]
-    return images
 
 
 class DockerComposeServices:

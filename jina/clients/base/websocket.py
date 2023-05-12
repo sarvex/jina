@@ -131,9 +131,7 @@ class WebSocketBaseClient(BaseClient):
                 )
             )
 
-            request_buffer: Dict[
-                str, asyncio.Future
-            ] = dict()  # maps request_ids to futures (tasks)
+            request_buffer: Dict[str, asyncio.Future] = {}
 
             def _result_handler(result):
                 return result

@@ -31,12 +31,14 @@ class DummyExecutor(Executor):
 
 
 def _create_test_data_message():
-    req = list(
+    return list(
         request_generator(
-            '/', DocumentArray([Document(text='input document') for _ in range(10)])
+            '/',
+            DocumentArray(
+                [Document(text='input document') for _ in range(10)]
+            ),
         )
     )[0]
-    return req
 
 
 @pytest.mark.parametrize('signal', [signal.SIGTERM, signal.SIGINT])

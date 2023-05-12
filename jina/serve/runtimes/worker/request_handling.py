@@ -192,42 +192,43 @@ class WorkerRequestHandler:
             * _batchqueue_instances of "shape" exec_endpoint_name -> parameters_key -> batch_queue
             * _batchqueue_config mapping each exec_endpoint_name to a dynamic batching configuration
         """
-        if getattr(self._executor, 'dynamic_batching', None) is not None:
-            # We need to sort the keys into endpoints and functions
-            # Endpoints allow specific configurations while functions allow configs to be applied to all endpoints of the function
-            dbatch_endpoints = []
-            dbatch_functions = []
-            for key, dbatch_config in self._executor.dynamic_batching.items():
-                if key.startswith('/'):
-                    dbatch_endpoints.append((key, dbatch_config))
-                else:
-                    dbatch_functions.append((key, dbatch_config))
+        if getattr(self._executor, 'dynamic_batching', None) is None:
+            return
+        # We need to sort the keys into endpoints and functions
+        # Endpoints allow specific configurations while functions allow configs to be applied to all endpoints of the function
+        dbatch_endpoints = []
+        dbatch_functions = []
+        for key, dbatch_config in self._executor.dynamic_batching.items():
+            if key.startswith('/'):
+                dbatch_endpoints.append((key, dbatch_config))
+            else:
+                dbatch_functions.append((key, dbatch_config))
 
-            # Specific endpoint configs take precedence over function configs
-            for endpoint, dbatch_config in dbatch_endpoints:
-                self._batchqueue_config[endpoint] = dbatch_config
+        # Specific endpoint configs take precedence over function configs
+        for endpoint, dbatch_config in dbatch_endpoints:
+            self._batchqueue_config[endpoint] = dbatch_config
 
-            # Process function configs
-            func_endpoints: Dict[str, List[str]] = {
-                func.fn.__name__: [] for func in self._executor.requests.values()
-            }
-            for endpoint, func in self._executor.requests.items():
-                func_endpoints[func.fn.__name__].append(endpoint)
-            for func_name, dbatch_config in dbatch_functions:
-                for endpoint in func_endpoints[func_name]:
-                    if endpoint not in self._batchqueue_config:
-                        self._batchqueue_config[endpoint] = dbatch_config
+        # Process function configs
+        func_endpoints: Dict[str, List[str]] = {
+            func.fn.__name__: [] for func in self._executor.requests.values()
+        }
+        for endpoint, func in self._executor.requests.items():
+            func_endpoints[func.fn.__name__].append(endpoint)
+        for func_name, dbatch_config in dbatch_functions:
+            for endpoint in func_endpoints[func_name]:
+                if endpoint not in self._batchqueue_config:
+                    self._batchqueue_config[endpoint] = dbatch_config
 
-            self.logger.debug(
-                f'Executor Dynamic Batching configs: {self._executor.dynamic_batching}'
-            )
-            self.logger.debug(
-                f'Endpoint Batch Queue Configs: {self._batchqueue_config}'
-            )
+        self.logger.debug(
+            f'Executor Dynamic Batching configs: {self._executor.dynamic_batching}'
+        )
+        self.logger.debug(
+            f'Endpoint Batch Queue Configs: {self._batchqueue_config}'
+        )
 
-            self._batchqueue_instances = {
-                endpoint: {} for endpoint in self._batchqueue_config.keys()
-            }
+        self._batchqueue_instances = {
+            endpoint: {} for endpoint in self._batchqueue_config.keys()
+        }
 
     def _init_monitoring(
             self,
@@ -332,7 +333,7 @@ class WorkerRequestHandler:
             self.logger.error(f'fail to load config from {self.args.uses}')
             raise
         except FileNotFoundError:
-            self.logger.error(f'fail to load file dependency')
+            self.logger.error('fail to load file dependency')
             raise
         except Exception:
             self.logger.critical(f'can not load the executor from {self.args.uses}')
@@ -387,8 +388,7 @@ class WorkerRequestHandler:
     @staticmethod
     def _parse_params(parameters: Dict, executor_name: str):
         parsed_params = parameters
-        specific_parameters = parameters.get(executor_name, None)
-        if specific_parameters:
+        if specific_parameters := parsed_params.get(executor_name, None):
             parsed_params.update(**specific_parameters)
 
         return parsed_params
@@ -464,8 +464,8 @@ class WorkerRequestHandler:
                 params = requests[0].parameters
                 results_key = self._KEY_RESULT
 
-                if not results_key in params.keys():
-                    params[results_key] = dict()
+                if results_key not in params.keys():
+                    params[results_key] = {}
 
                 params[results_key].update({self.args.name: return_data})
                 requests[0].parameters = params
@@ -637,11 +637,11 @@ class WorkerRequestHandler:
         key_result = WorkerRequestHandler._KEY_RESULT
         parameters = requests[0].parameters
         if key_result not in parameters.keys():
-            parameters[key_result] = dict()
+            parameters[key_result] = {}
         # we only merge the results and make the assumption that the others params does not change during execution
 
         for req in requests:
-            parameters[key_result].update(req.parameters.get(key_result, dict()))
+            parameters[key_result].update(req.parameters.get(key_result, {}))
 
         return parameters
 
@@ -656,12 +656,11 @@ class WorkerRequestHandler:
 
         :returns: DocumentArray extracted from the field from all messages
         """
-        if len(requests) > 1:
-            result = DocumentArray(d for r in requests for d in getattr(r, 'docs'))
-        else:
-            result = getattr(requests[0], 'docs')
-
-        return result
+        return (
+            DocumentArray(d for r in requests for d in getattr(r, 'docs'))
+            if len(requests) > 1
+            else getattr(requests[0], 'docs')
+        )
 
     @staticmethod
     def reduce(docs_matrix: List['DocumentArray']) -> Optional['DocumentArray']:
@@ -747,9 +746,7 @@ class WorkerRequestHandler:
         if self.tracer:
             from opentelemetry.propagate import extract
 
-            context = extract(dict(metadata))
-            return context
-
+            return extract(dict(metadata))
         return None
 
     def _log_data_request(self, request: DataRequest):
@@ -766,8 +763,8 @@ class WorkerRequestHandler:
         :returns: the response request
         """
         with MetricsTimer(
-                self._summary, self._receiving_request_seconds, self._metric_attributes
-        ):
+                    self._summary, self._receiving_request_seconds, self._metric_attributes
+            ):
             try:
                 if self.logger.debug_enabled:
                     self._log_data_request(requests[0])
@@ -785,7 +782,7 @@ class WorkerRequestHandler:
                         1, attributes=self._metric_attributes
                     )
                 return result
-            except (RuntimeError, Exception) as ex:
+            except Exception as ex:
                 self.logger.error(
                     f'{ex!r}'
                     + f'\n add "--quiet-error" to suppress the exception details'

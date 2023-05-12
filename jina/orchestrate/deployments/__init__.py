@@ -329,8 +329,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         if args is None:
             args = ArgNamespace.kwargs2namespace(kwargs, parser, True)
         self.args = args
-        log_config = kwargs.get('log_config')
-        if log_config:
+        if log_config := kwargs.get('log_config'):
             self.args.log_config = log_config
         self.args.polling = (
             args.polling if hasattr(args, 'polling') else PollingType.ANY
@@ -353,9 +352,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
             self._parse_external_replica_hosts_and_ports()
             self._parse_addresses_into_host_and_port()
         if len(self.ext_repl_ports) > 1:
-            if self.args.replicas != 1 and self.args.replicas != len(
-                self.ext_repl_ports
-            ):
+            if self.args.replicas not in [1, len(self.ext_repl_ports)]:
                 raise ValueError(
                     f'Number of hosts ({len(self.args.host)}) does not match the number of replicas ({self.args.replicas})'
                 )
@@ -394,18 +391,17 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         if self.head_args:
             # add head information
             return [f'{self.protocol}://{self.host}:{self.head_port}']
-        else:
-            # there is no head, add the worker connection information instead
-            ports = self.ports
-            hosts = [
-                __docker_host__
-                if host_is_local(host) and in_docker() and self.dockerized_uses
-                else host
-                for host in self.hosts
-            ]
-            return [
-                f'{self.protocol}://{host}:{port}' for host, port in zip(hosts, ports)
-            ]
+        # there is no head, add the worker connection information instead
+        ports = self.ports
+        hosts = [
+            __docker_host__
+            if host_is_local(host) and in_docker() and self.dockerized_uses
+            else host
+            for host in self.hosts
+        ]
+        return [
+            f'{self.protocol}://{host}:{port}' for host, port in zip(hosts, ports)
+        ]
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         super().__exit__(exc_type, exc_val, exc_tb)
@@ -475,7 +471,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         _all_port_monitoring = self.args.port_monitoring
         self.args.all_port_monitoring = (
             [_all_port_monitoring]
-            if not type(_all_port_monitoring) == list
+            if type(_all_port_monitoring) != list
             else _all_port_monitoring
         )
         self.args.port_monitoring = int(
@@ -569,7 +565,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
             protocol=self.protocol,
             grpc_channel_options=self.args.grpc_channel_options,
         )
-        kwargs.update(self._gateway_kwargs)
+        kwargs |= self._gateway_kwargs
         return Client(**kwargs)
 
     @staticmethod
@@ -590,11 +586,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         _head_args.runtime_cls = 'HeadRuntime'
         _head_args.replicas = 1
 
-        if args.name:
-            _head_args.name = f'{args.name}/head'
-        else:
-            _head_args.name = f'head'
-
+        _head_args.name = f'{args.name}/head' if args.name else 'head'
         return _head_args
 
     @property
@@ -673,10 +665,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         if not isinstance(protocol, list):
             protocol = [protocol]
         protocol = [str(_p) + ('s' if self.tls_enabled else '') for _p in protocol]
-        if len(protocol) == 1:
-            return protocol[0]
-        else:
-            return protocol
+        return protocol[0] if len(protocol) == 1 else protocol
 
     @property
     def first_pod_args(self) -> Namespace:
@@ -714,14 +703,13 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         """
         if self.head_port:
             return [self.head_port]
-        else:
-            ports = []
-            for replica in self.pod_args['pods'][0]:
-                if isinstance(replica.port, list):
-                    ports.extend(replica.port)
-                else:
-                    ports.append(replica.port)
-            return ports
+        ports = []
+        for replica in self.pod_args['pods'][0]:
+            if isinstance(replica.port, list):
+                ports.extend(replica.port)
+            else:
+                ports.append(replica.port)
+        return ports
 
     @property
     def hosts(self) -> List[str]:
@@ -855,15 +843,12 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         :param head_is_container: boolean specifying if head pod is to be run in container
         :return: host to pass in connection list of the head
         """
-        # Check if the current pod and head are both containerized on the same host
-        # If so __docker_host__ needs to be advertised as the worker's address to the head
-        worker_host = (
+        return (
             __docker_host__
             if (pod_is_container and (head_is_container or in_docker()))
             and host_is_local(pod_args.host)
             else pod_args.host
         )
-        return worker_host
 
     def _wait_until_all_ready(self):
         import warnings
@@ -994,8 +979,10 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
                 coros.append(self.head_pod.async_wait_start_success())
             if self.gateway_pod is not None:
                 coros.append(self.gateway_pod.async_wait_start_success())
-            for shard_id in self.shards:
-                coros.append(self.shards[shard_id].async_wait_start_success())
+            coros.extend(
+                self.shards[shard_id].async_wait_start_success()
+                for shard_id in self.shards
+            )
             await asyncio.gather(*coros)
         except:
             self.close()
@@ -1033,9 +1020,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
 
         .. # noqa: DAR201
         """
-        is_ready = True
-        if self.head_pod is not None:
-            is_ready = self.head_pod.is_ready.is_set()
+        is_ready = True if self.head_pod is None else self.head_pod.is_ready.is_set()
         if is_ready:
             for shard_id in self.shards:
                 is_ready = self.shards[shard_id].is_ready
@@ -1065,14 +1050,6 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
             if len(parts) == 1:
                 parts = value.split(':')
 
-                if len(parts) == 1:
-                    try:
-                        int(parts[0])
-                    except:
-                        use_uuids = True
-                    if use_uuids:
-                        return parts
-                    parts = [parts[0], str(int(parts[0]) + 1)]
             else:
                 # try to detect if parts are not numbers
                 try:
@@ -1080,10 +1057,15 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
                 except:
                     use_uuids = True
 
-                if not use_uuids:
-                    return [int(p) for p in parts]
-                else:
+                return [int(p) for p in parts] if not use_uuids else parts
+            if len(parts) == 1:
+                try:
+                    int(parts[0])
+                except:
+                    use_uuids = True
+                if use_uuids:
                     return parts
+                parts = [parts[0], str(int(parts[0]) + 1)]
         else:
             parts = []
 
@@ -1099,29 +1081,31 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         :return: a map from replica id to device id
         """
         if (
-            device_str
-            and isinstance(device_str, str)
-            and device_str.startswith('RR')
-            and replicas >= 1
+            not device_str
+            or not isinstance(device_str, str)
+            or not device_str.startswith('RR')
+            or replicas < 1
         ):
-            try:
-                num_devices = str(subprocess.check_output(['nvidia-smi', '-L'])).count(
-                    'UUID'
-                )
-            except:
-                num_devices = int(os.environ.get('CUDA_TOTAL_DEVICES', 0))
-                if num_devices == 0:
-                    return
+            return
+        try:
+            num_devices = str(subprocess.check_output(['nvidia-smi', '-L'])).count(
+                'UUID'
+            )
+        except:
+            num_devices = int(os.environ.get('CUDA_TOTAL_DEVICES', 0))
+            if num_devices == 0:
+                return
 
-            selected_devices = []
-            if device_str[2:]:
+        selected_devices = []
+        if device_str[2:]:
 
-                for device in Deployment._parse_devices(device_str[2:], num_devices):
-                    selected_devices.append(device)
-            else:
-                selected_devices = range(num_devices)
-            _c = cycle(selected_devices)
-            return {j: next(_c) for j in range(replicas)}
+            selected_devices.extend(
+                iter(Deployment._parse_devices(device_str[2:], num_devices))
+            )
+        else:
+            selected_devices = range(num_devices)
+        _c = cycle(selected_devices)
+        return {j: next(_c) for j in range(replicas)}
 
     def _set_pod_args(self) -> Dict[int, List[Namespace]]:
         result = {}
@@ -1234,10 +1218,10 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         else:
             _args.name = f'{entity_type}-0'
 
-        if 'uses_before' == entity_type:
+        if entity_type == 'uses_before':
             _args.uses_requests = None
             _args.uses = args.uses_before or __default_executor__
-        elif 'uses_after' == entity_type:
+        elif entity_type == 'uses_after':
             _args.uses_requests = None
             _args.uses = args.uses_after or __default_executor__
         else:
@@ -1293,7 +1277,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
             connection_list = defaultdict(list)
 
             for shard_id in parsed_args['pods']:
-                for pod_idx, pod_args in enumerate(parsed_args['pods'][shard_id]):
+                for pod_args in parsed_args['pods'][shard_id]:
                     worker_host = self.get_worker_host(pod_args, self._is_docker, False)
                     connection_list[shard_id].append(
                         f'{worker_host}:{pod_args.port[0]}'
@@ -1311,7 +1295,6 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
         .. # noqa: DAR201
         """
         mermaid_graph = []
-        secret = '&ltsecret&gt'
         if self.role != DeploymentRoleType.GATEWAY and not self.external:
             mermaid_graph = [f'subgraph {self.name};', f'\ndirection LR;\n']
 
@@ -1320,6 +1303,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
                 if self.uses_before_args is not None
                 else None
             )
+            secret = '&ltsecret&gt'
             uses_before_uses = (
                 replace_secret_of_hub_uri(self.uses_before_args.uses, secret)
                 if self.uses_before_args is not None
@@ -1350,7 +1334,7 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
                         args.uses for args in pod_args
                     ]  # all the uses should be the same but let's keep it this
                     # way
-                    for rep_i, (name, use) in enumerate(zip(names, uses)):
+                    for name, use in zip(names, uses):
                         escaped_uses = f'"{replace_secret_of_hub_uri(use, secret)}"'
                         shard_mermaid_graph.append(f'{name}[{escaped_uses}]:::pod;')
                     shard_mermaid_graph.append('end;')
@@ -1380,10 +1364,10 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
 
                 # just put the replicas in parallel
                 if pod_args.replicas > 1:
-                    for rep_i in range(pod_args.replicas):
-                        mermaid_graph.append(
-                            f'{pod_args.name}/rep-{rep_i}["{uses}"]:::pod;'
-                        )
+                    mermaid_graph.extend(
+                        f'{pod_args.name}/rep-{rep_i}["{uses}"]:::pod;'
+                        for rep_i in range(pod_args.replicas)
+                    )
                 else:
                     mermaid_graph.append(f'{pod_args.name}["{uses}"]:::pod;')
 
@@ -1500,16 +1484,15 @@ class Deployment(JAMLCompatible, PostMixin, BaseOrchestrator, metaclass=Deployme
             docker_compose_address = [
                 f'{to_compatible_name(self.head_args.name)}:{port}'
             ]
+        elif self.args.replicas == 1 or self.name == 'gateway':
+            docker_compose_address = [f'{to_compatible_name(self.name)}:{port}']
         else:
-            if self.args.replicas == 1 or self.name == 'gateway':
-                docker_compose_address = [f'{to_compatible_name(self.name)}:{port}']
-            else:
-                docker_compose_address = []
-                for rep_id in range(self.args.replicas):
-                    node_name = f'{self.name}/rep-{rep_id}'
-                    docker_compose_address.append(
-                        f'{to_compatible_name(node_name)}:{port}'
-                    )
+            docker_compose_address = []
+            for rep_id in range(self.args.replicas):
+                node_name = f'{self.name}/rep-{rep_id}'
+                docker_compose_address.append(
+                    f'{to_compatible_name(node_name)}:{port}'
+                )
         return docker_compose_address
 
     def _to_docker_compose_config(self, deployments_addresses=None):

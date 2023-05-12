@@ -74,7 +74,7 @@ async def restart_deployment(
             label_selector=f'app={deployment}',
         )
         current_pod_names = [p.metadata.name for p in pods.items]
-        if not any(i in current_pod_names for i in old_pod_names):
+        if all(i not in current_pod_names for i in old_pod_names):
             logger.info(f'All pods in deployment {deployment} have been restarted')
             break
         logger.info(f'Waiting for all pods in deployment {deployment} to be restarted')
@@ -190,7 +190,7 @@ async def run_test_until_event(
     except Exception as exc:
         logger.error(f' Exception raised in sending requests task: {exc}')
         # Let's also cancel all running tasks:
-        logger.warning(f'Cancelling pending tasks and stopping the event loop.')
+        logger.warning('Cancelling pending tasks and stopping the event loop.')
         loop = asyncio.get_event_loop()
         pending = asyncio.all_tasks()
         for task in pending:
@@ -200,7 +200,7 @@ async def run_test_until_event(
             with suppress(asyncio.CancelledError):
                 loop.run_until_complete(task)
 
-        logger.info(f'closing asycio event loop!')
+        logger.info('closing asycio event loop!')
         loop.close()
 
     logger.info(
@@ -211,7 +211,7 @@ async def run_test_until_event(
 
 def inject_failures(k8s_cluster, logger):
     k8s_cluster.install_linkderd_smi()
-    logger.info(f'Inject random failures into test cluster')
+    logger.info('Inject random failures into test cluster')
     proc = subprocess.Popen(
         [
             str(k8s_cluster._cluster.kubectl_path),
@@ -272,7 +272,7 @@ async def test_failure_scenarios(logger, docker_images, tmpdir, k8s_cluster):
             logger=logger,
         )
     )
-    logger.info(f' Sending task has been scheduled')
+    logger.info(' Sending task has been scheduled')
     await asyncio.sleep(5.0)
     # Scale down the Executor to 1 replicas
     await scale(
@@ -283,7 +283,7 @@ async def test_failure_scenarios(logger, docker_images, tmpdir, k8s_cluster):
         k8s_namespace=namespace,
         logger=logger,
     )
-    logger.info(f' Scaling to 1 replicas has been done')
+    logger.info(' Scaling to 1 replicas has been done')
     await asyncio.sleep(5.0)
     # Scale back up to 2 replicas
     await scale(
@@ -294,7 +294,7 @@ async def test_failure_scenarios(logger, docker_images, tmpdir, k8s_cluster):
         k8s_namespace=namespace,
         logger=logger,
     )
-    logger.info(f' Scaling to 2 replicas has been done')
+    logger.info(' Scaling to 2 replicas has been done')
     await asyncio.sleep(5.0)
     # restart all pods in the deployment
     await restart_deployment(
@@ -304,7 +304,7 @@ async def test_failure_scenarios(logger, docker_images, tmpdir, k8s_cluster):
         k8s_namespace=namespace,
         logger=logger,
     )
-    logger.info(f' Restarting deployment has been done')
+    logger.info(' Restarting deployment has been done')
     await asyncio.sleep(5.0)
     await delete_pod(
         deployment='executor0',
@@ -312,17 +312,17 @@ async def test_failure_scenarios(logger, docker_images, tmpdir, k8s_cluster):
         k8s_namespace=namespace,
         logger=logger,
     )
-    logger.info(f'Deleting pod has been done')
+    logger.info('Deleting pod has been done')
     await asyncio.sleep(5.0)
 
     stop_event.set()
     responses, sent_ids = await send_task
-    logger.info(f'Sending task has finished')
+    logger.info('Sending task has finished')
     logger.info(f'Sending task has finished: {len(sent_ids)} vs {len(responses)}')
     assert len(sent_ids) == len(responses)
     doc_ids = set()
     pod_ids = set()
-    logger.info(f'Collecting doc and pod ids from responses...')
+    logger.info('Collecting doc and pod ids from responses...')
     assert len(sent_ids) == len(responses)
     for response in responses:
         doc = response.docs[0]

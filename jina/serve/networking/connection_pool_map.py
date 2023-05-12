@@ -76,10 +76,10 @@ class _ConnectionPoolMap:
         # result is a list of 'shape' (num_shards, num_replicas), containing all replicas for all shards
         replicas = []
         if deployment in self._deployments:
-            for shard_id in self._deployments[deployment]['shards']:
-                replicas.append(
-                    self._get_connection_list(deployment, 'shards', shard_id)
-                )
+            replicas.extend(
+                self._get_connection_list(deployment, 'shards', shard_id)
+                for shard_id in self._deployments[deployment]['shards']
+            )
         return replicas
 
     async def close(self):
@@ -98,16 +98,18 @@ class _ConnectionPoolMap:
         increase_access_count: bool = True,
     ) -> Optional[_ReplicaList]:
         try:
-            if entity_id is None and len(self._deployments[deployment][type_]) > 0:
-                # select a random entity
-                if increase_access_count:
-                    self._access_count[deployment] += 1
-                return self._deployments[deployment][type_][
-                    self._access_count[deployment]
-                    % len(self._deployments[deployment][type_])
-                ]
-            else:
+            if (
+                entity_id is not None
+                or len(self._deployments[deployment][type_]) <= 0
+            ):
                 return self._deployments[deployment][type_][entity_id]
+            # select a random entity
+            if increase_access_count:
+                self._access_count[deployment] += 1
+            return self._deployments[deployment][type_][
+                self._access_count[deployment]
+                % len(self._deployments[deployment][type_])
+            ]
         except KeyError:
             if (
                 entity_id is None

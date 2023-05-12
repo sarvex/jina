@@ -15,11 +15,7 @@ from jina.orchestrate.deployments.config.helper import (
 
 @pytest.mark.parametrize('is_master', (True, False))
 def test_version(is_master, requests_mock):
-    if is_master:
-        count = 0
-    else:
-        # current version is published already
-        count = 3
+    count = 0 if is_master else 3
     requests_mock.get(
         'https://registry.hub.docker.com/v2/repositories/jinaai/jina/tags',
         text=json.dumps(

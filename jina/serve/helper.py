@@ -94,8 +94,7 @@ def format_grpc_error(error: grpc.aio.AioRpcError) -> str:
     :return: formatted error
     '''
     default_string = str(error)
-    trailing_metadata = extract_trailing_metadata(error)
-    if trailing_metadata:
+    if trailing_metadata := extract_trailing_metadata(error):
         return f'{default_string}\n{trailing_metadata}'
 
     return default_string

@@ -79,7 +79,10 @@ def _custom_grpc_options(
 
     if not additional_options:
         raise RuntimeError()
-    if all([key not in additional_options.keys() for key in expected_grpc_option_keys]):
+    if all(
+        key not in additional_options.keys()
+        for key in expected_grpc_option_keys
+    ):
         raise RuntimeError()
 
     return get_default_grpc_options()

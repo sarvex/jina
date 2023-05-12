@@ -11,11 +11,10 @@ def _validate_flow(f):
     graph_dict = f._get_graph_representation()
     addresses = f._get_deployments_addresses()
     for name, pod in f:
-        if name != 'gateway':
-            for n in pod.needs:
+        for n in pod.needs:
+            if name != 'gateway':
                 assert name in graph_dict[n if n != 'gateway' else 'start-gateway']
-        else:
-            for n in pod.needs:
+            else:
                 assert 'end-gateway' in graph_dict[n]
 
 
@@ -59,11 +58,7 @@ def test_custom_logging(monkeypatch, override_executor_log_config):
     monkeypatch.delenv('JINA_LOG_LEVEL', raising=True)  # ignore global env
     log_config_path = os.path.join(cur_dir, '../../../logging/yaml/file.yml')
     f = Flow(log_config=log_config_path)
-    if override_executor_log_config:
-        f = f.add(log_config='default')
-    else:
-        f = f.add()
-
+    f = f.add(log_config='default') if override_executor_log_config else f.add()
     with f:
         assert f.args.log_config.endswith('logging/yaml/file.yml')
         for name, pod in f:

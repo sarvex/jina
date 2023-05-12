@@ -31,7 +31,7 @@ from tests.helper import _generate_pod_args
 async def test_regular_data_case(stream):
     args = _generate_pod_args()
     args.polling = PollingType.ANY
-    connection_list_dict = {0: [f'fake_ip:8080']}
+    connection_list_dict = {0: ['fake_ip:8080']}
     args.connection_list = json.dumps(connection_list_dict)
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
 
@@ -65,7 +65,7 @@ def test_message_merging(disable_reduce, stream):
     else:
         args = _generate_pod_args(['--no-reduce'])
     args.polling = PollingType.ALL
-    connection_list_dict = {0: [f'ip1:8080'], 1: [f'ip2:8080'], 2: [f'ip3:8080']}
+    connection_list_dict = {0: ['ip1:8080'], 1: ['ip2:8080'], 2: ['ip3:8080']}
     args.connection_list = json.dumps(connection_list_dict)
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
 
@@ -87,7 +87,7 @@ def test_uses_before_uses_after():
     args.polling = PollingType.ALL
     args.uses_before_address = 'fake_address'
     args.uses_after_address = 'fake_address'
-    connection_list_dict = {0: [f'ip1:8080'], 1: [f'ip2:8080'], 2: [f'ip3:8080']}
+    connection_list_dict = {0: ['ip1:8080'], 1: ['ip2:8080'], 2: ['ip3:8080']}
     args.connection_list = json.dumps(connection_list_dict)
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
 
@@ -122,7 +122,7 @@ def test_decompress(monkeypatch):
 
     args = _generate_pod_args()
     args.polling = PollingType.ANY
-    connection_list_dict = {0: [f'fake_ip:8080']}
+    connection_list_dict = {0: ['fake_ip:8080']}
     args.connection_list = json.dumps(connection_list_dict)
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
 
@@ -156,7 +156,7 @@ def test_dynamic_polling(polling):
         ]
     )
 
-    connection_list_dict = {0: [f'fake_ip:8080'], 1: [f'fake_ip:8080']}
+    connection_list_dict = {0: ['fake_ip:8080'], 1: ['fake_ip:8080']}
     args.connection_list = json.dumps(connection_list_dict)
 
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
@@ -198,7 +198,7 @@ def test_base_polling(polling):
             str(2),
         ]
     )
-    connection_list_dict = {0: [f'fake_ip:8080'], 1: [f'fake_ip:8080']}
+    connection_list_dict = {0: ['fake_ip:8080'], 1: ['fake_ip:8080']}
     args.connection_list = json.dumps(connection_list_dict)
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
 
@@ -258,7 +258,7 @@ async def test_head_runtime_reflection():
 def test_timeout_behaviour():
     args = _generate_pod_args(['--timeout-send', '100'])
     args.polling = PollingType.ANY
-    connection_list_dict = {0: [f'fake_ip:8080']}
+    connection_list_dict = {0: ['fake_ip:8080']}
     args.connection_list = json.dumps(connection_list_dict)
     cancel_event, handle_queue, runtime_thread = _create_runtime(args)
 

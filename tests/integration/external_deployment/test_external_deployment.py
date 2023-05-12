@@ -378,6 +378,8 @@ def test_external_flow_with_grpc_metadata():
 
             return self._deny
 
+
+
     class DummyGRPCGateway(GRPCGateway):
         def __int__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -448,12 +450,13 @@ def test_external_flow_with_grpc_metadata():
                 self.ssl_keyfile != self.ssl_certfile
             ):  # if we have only ssl_keyfile and not ssl_certfile or vice versa
                 raise ValueError(
-                    f"you can't pass a ssl_keyfile without a ssl_certfile and vice versa"
+                    "you can't pass a ssl_keyfile without a ssl_certfile and vice versa"
                 )
             else:
                 self.server.add_insecure_port(bind_addr)
             self.logger.debug(f'start server bound to {bind_addr}')
             await self.server.start()
+
 
     class ExtExecutor(Executor):
         @requests

@@ -420,8 +420,7 @@ class MyServeExec(Executor):
 
 @pytest.fixture()
 def exposed_port():
-    port = random_port()
-    yield port
+    yield random_port()
 
 
 @pytest.fixture(autouse=False)
@@ -483,6 +482,7 @@ def test_deployment_client_dynamic_batching(enable_dynamic_batching):
 @pytest.mark.parametrize('replicas', [1, 2, 3])
 def test_deployment_shards_replicas(shards, replicas):
 
+
     class PIDExecutor(Executor):
 
         @requests
@@ -497,5 +497,5 @@ def test_deployment_shards_replicas(shards, replicas):
     with dep:
         docs = dep.post(on='/', inputs=DocumentArray.empty(20), request_size=1)
 
-    returned_pids = set([doc.tags['pid'] for doc in docs])
+    returned_pids = {doc.tags['pid'] for doc in docs}
     assert len(returned_pids) == shards * replicas

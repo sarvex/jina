@@ -202,7 +202,6 @@ async def test_pods_flow_topology(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('polling', ['ALL', 'ANY'])
-# test simple topology with shards
 async def test_pods_shards(polling, port_generator):
     head_port = port_generator()
     port = port_generator()
@@ -228,7 +227,7 @@ async def test_pods_shards(polling, port_generator):
     head_pod.start()
 
     head_pod.wait_start_success()
-    for i, pod in enumerate(shard_pods):
+    for pod in shard_pods:
         # this would be done by the Pod, its adding the worker to the head
         pod.wait_start_success()
 
@@ -310,13 +309,10 @@ async def test_pods_replicas(port_generator):
 @pytest.mark.asyncio
 async def test_pods_with_executor(port_generator):
     graph_description = '{"start-gateway": ["pod0"], "pod0": ["end-gateway"]}'
-    pods = []
-
     uses_before_port, uses_before_pod = await _start_create_pod(
         'pod0', port_generator, type='uses_before', executor='NameChangeExecutor'
     )
-    pods.append(uses_before_pod)
-
+    pods = [uses_before_pod]
     uses_after_port, uses_after_pod = await _start_create_pod(
         'pod0', port_generator, type='uses_after', executor='NameChangeExecutor'
     )
@@ -339,7 +335,7 @@ async def test_pods_with_executor(port_generator):
     head_pod = _create_head_pod(
         head_port,
         connection_list_dict,
-        f'pod0/head',
+        'pod0/head',
         'ALL',
         f'127.0.0.1:{uses_before_port}',
         f'127.0.0.1:{uses_after_port}',
@@ -392,7 +388,7 @@ async def test_pods_gateway_worker_direct_connection(port_generator):
     graph_description = '{"start-gateway": ["pod0"], "pod0": ["end-gateway"]}'
     pod_addresses = f'{{"pod0": ["0.0.0.0:{worker_port}"]}}'
 
-    worker_pod = _create_worker_pod(worker_port, f'pod0')
+    worker_pod = _create_worker_pod(worker_port, 'pod0')
 
     worker_pod.start()
 

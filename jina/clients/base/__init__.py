@@ -111,7 +111,7 @@ class BaseClient(InstrumentationMixin, ABC):
             if not isinstance(r, Request):
                 raise TypeError(f'{typename(r)} is not a valid Request')
         except Exception as ex:
-            default_logger.error(f'inputs is not valid!')
+            default_logger.error('inputs is not valid!')
             raise BadClientInput from ex
 
     def _get_requests(
@@ -126,7 +126,7 @@ class BaseClient(InstrumentationMixin, ABC):
         _kwargs = vars(self.args)
         _kwargs['data'] = self.inputs
         # override by the caller-specific kwargs
-        _kwargs.update(kwargs)
+        _kwargs |= kwargs
 
         if hasattr(self._inputs, '__len__'):
             total_docs = len(self._inputs)
@@ -143,11 +143,11 @@ class BaseClient(InstrumentationMixin, ABC):
         if inspect.isasyncgen(self.inputs):
             from jina.clients.request.asyncio import request_generator
 
-            return request_generator(**_kwargs)
         else:
             from jina.clients.request import request_generator
 
-            return request_generator(**_kwargs)
+
+        return request_generator(**_kwargs)
 
     @property
     def inputs(self) -> 'InputType':
@@ -167,10 +167,7 @@ class BaseClient(InstrumentationMixin, ABC):
 
         :param bytes_gen: input type
         """
-        if hasattr(bytes_gen, '__call__'):
-            self._inputs = bytes_gen()
-        else:
-            self._inputs = bytes_gen
+        self._inputs = bytes_gen() if hasattr(bytes_gen, '__call__') else bytes_gen
 
     @abc.abstractmethod
     async def _get_results(

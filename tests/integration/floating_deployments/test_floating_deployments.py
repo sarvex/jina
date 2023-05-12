@@ -42,7 +42,7 @@ def test_floating_executors(tmpdir, protocol):
     )
 
     with f:
-        for j in range(NUM_REQ):
+        for _ in range(NUM_REQ):
             start_time = time.time()
             ret = f.post(on=__default_endpoint__, inputs=DocumentArray.empty(1))
             end_time = time.time()
@@ -78,7 +78,7 @@ def test_floating_executors_right_after_gateway(tmpdir, protocol):
     )
 
     with f:
-        for j in range(NUM_REQ):
+        for _ in range(NUM_REQ):
             start_time = time.time()
             ret = f.post(on=__default_endpoint__, inputs=DocumentArray.empty(1))
             end_time = time.time()
@@ -120,7 +120,7 @@ def test_multiple_floating_points(tmpdir, protocol):
     )
 
     with f:
-        for j in range(NUM_REQ):
+        for _ in range(NUM_REQ):
             start_time = time.time()
             ret = f.post(on=__default_endpoint__, inputs=DocumentArray.empty(1))
             end_time = time.time()
@@ -174,7 +174,7 @@ def test_complex_flow(tmpdir, protocol):
     )
 
     with f:
-        for j in range(NUM_REQ):
+        for _ in range(NUM_REQ):
             start_time = time.time()
             ret = f.post(on=__default_endpoint__, inputs=DocumentArray.empty(1))
             end_time = time.time()
@@ -219,7 +219,7 @@ def test_floating_needs(needs, tmpdir):
         )
     )
     with f:
-        for j in range(NUM_REQ):
+        for _ in range(NUM_REQ):
             start_time = time.time()
             response = f.post(on='/endpoint', inputs=DocumentArray.empty(2))
             end_time = time.time()
@@ -293,7 +293,7 @@ def test_floating_needs_more_complex(needs, tmpdir):
         )
     )
     with f:
-        for j in range(NUM_REQ):
+        for _ in range(NUM_REQ):
             start_time = time.time()
             response = f.post(on='/endpoint', inputs=DocumentArray.empty(1))
             end_time = time.time()

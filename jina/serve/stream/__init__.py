@@ -84,14 +84,14 @@ class RequestStreamer:
         prefetch = prefetch or self._prefetch
         if context is not None:
             for metadatum in context.invocation_metadata():
-                if metadatum.key == '__results_in_order__':
-                    results_in_order = metadatum.value == 'true'
                 if metadatum.key == '__prefetch__':
                     try:
                         prefetch = int(metadatum.value)
                     except:
                         self.logger.debug(f'Couldn\'t parse prefetch to int value!')
 
+                elif metadatum.key == '__results_in_order__':
+                    results_in_order = metadatum.value == 'true'
         try:
             async_iter: AsyncIterator = self._stream_requests(
                 request_iterator=request_iterator,
@@ -258,8 +258,7 @@ class RequestStreamer:
                 result = future.result()
                 if isinstance(result, self._EndOfStreaming):
                     break
-                response = self._result_handler(result)
-                yield response
+                yield self._result_handler(result)
                 requests_to_handle.count -= 1
                 update_all_handled()
 

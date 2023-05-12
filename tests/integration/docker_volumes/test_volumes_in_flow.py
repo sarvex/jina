@@ -34,7 +34,7 @@ def test_volumes_in_flow(
 ):
     if source:  # test manually set volume and workspace
         source = os.path.join(tmpdir, source)
-        volumes = [str(source) + ':' + destination]
+        volumes = [f'{str(source)}:{destination}']
     else:  # test auto volume and workspace
         source = __cache_path__
 

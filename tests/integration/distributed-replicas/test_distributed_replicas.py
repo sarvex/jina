@@ -84,7 +84,7 @@ def test_distributed_replicas(input_docs, hosts, as_list, use_stream):
     ), _external_deployment_args(num_shards=1, port=port2)
     depl1 = Deployment(args1)
     depl2 = Deployment(args2)
-    with depl1, depl2:
+    with (depl1, depl2):
         flow = Flow().add(
             host=hosts,
             port=ports,
@@ -94,7 +94,7 @@ def test_distributed_replicas(input_docs, hosts, as_list, use_stream):
             resp = flow.index(inputs=input_docs, request_size=2, stream=use_stream)
 
         depl1_id = resp[0].tags['uuid']
-        assert any([depl1_id != depl_id for depl_id in resp[1:, 'tags__uuid']])
+        assert any(depl1_id != depl_id for depl_id in resp[1:, 'tags__uuid'])
 
 
 def test_distributed_replicas_hosts_mismatch(input_docs):
@@ -139,17 +139,13 @@ def test_distributed_replicas_host_parsing(input_docs, hosts_as_list, ports_as_l
     ), _external_deployment_args(num_shards=1, port=port2)
     depl1 = Deployment(args1)
     depl2 = Deployment(args2)
-    if ports_as_list:
-        ports = [port1, port2]
-    else:
-        ports = f'{port1},{port2}'
-
+    ports = [port1, port2] if ports_as_list else f'{port1},{port2}'
     if hosts_as_list:
         hosts = [f'localhost:{port1}', f'localhost:{port2}']
     else:
         hosts = f'localhost:{port1},localhost:{port2}'
 
-    with depl1, depl2:
+    with (depl1, depl2):
         flow = Flow().add(
             host=hosts,
             port=ports,
@@ -159,7 +155,7 @@ def test_distributed_replicas_host_parsing(input_docs, hosts_as_list, ports_as_l
             resp = flow.index(inputs=input_docs, request_size=2, stream=use_stream)
 
         depl1_id = resp[0].tags['uuid']
-        assert any([depl1_id != depl_id for depl_id in resp[1:, 'tags__uuid']])
+        assert any(depl1_id != depl_id for depl_id in resp[1:, 'tags__uuid'])
 
 
 @pytest.mark.parametrize(
@@ -183,11 +179,8 @@ def test_distributed_replicas_docker(
     depl1 = Deployment(args1)
     depl2 = Deployment(args2)
 
-    if ports_as_list:
-        ports = [port1, port2]
-    else:
-        ports = f'{port1},{port2}'
-    with depl1, depl2:
+    ports = [port1, port2] if ports_as_list else f'{port1},{port2}'
+    with (depl1, depl2):
         flow = Flow().add(
             host=hosts,
             port=ports,
@@ -197,4 +190,4 @@ def test_distributed_replicas_docker(
             resp = flow.index(inputs=input_docs, request_size=2, stream=use_stream)
 
         depl1_id = resp[0].tags['uuid']
-        assert any([depl1_id != depl_id for depl_id in resp[1:, 'tags__uuid']])
+        assert any(depl1_id != depl_id for depl_id in resp[1:, 'tags__uuid'])

@@ -65,8 +65,8 @@ def test_reduce_shards(n_docs, port_generator):
     for doc in resp[0].docs:
 
         # assert matches and chunks are combined
-        matches = set([doc.id for doc in doc.matches])
-        chunks = set([doc.id for doc in doc.chunks])
+        matches = {doc.id for doc in doc.matches}
+        chunks = {doc.id for doc in doc.chunks}
         assert len(matches) == n_docs * n_shards
         assert len(chunks) == n_docs * n_shards
         for shard in range(n_shards):
@@ -133,11 +133,10 @@ class ExecutorStatus(Executor):
         for doc in docs:
             doc.text = 'exec-status'
 
-        status = {
+        return {
             'shard_id': self.runtime_args.shard_id,
             'happy_status': 'Hey there! Have a nice day :)',
         }
-        return status
 
 
 def test_reduce_needs(port_generator):

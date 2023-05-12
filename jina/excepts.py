@@ -138,8 +138,7 @@ class InternalNetworkError(grpc.aio.AioRpcError, BaseJinaException):
         :return: details of this exception
         """
         if self._details:
-            trailing_metadata = extract_trailing_metadata(self.og_exception)
-            if trailing_metadata:
+            if trailing_metadata := extract_trailing_metadata(self.og_exception):
                 return f'{self._details}\n{trailing_metadata}'
             else:
                 return self._details

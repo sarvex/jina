@@ -70,7 +70,7 @@ def _get_oneof_validator(oneof_fields: List, oneof_key: str) -> Callable:
             )
         return values
 
-    oneof_validator.__qualname__ = 'validate_' + oneof_key
+    oneof_validator.__qualname__ = f'validate_{oneof_key}'
     return root_validator(pre=True, allow_reuse=True)(oneof_validator)
 
 
@@ -94,7 +94,7 @@ def _get_oneof_setter(oneof_fields: List, oneof_key: str) -> Callable:
                 values.pop(oneof_field)
         return values
 
-    oneof_setter.__qualname__ = 'set_' + oneof_key
+    oneof_setter.__qualname__ = f'set_{oneof_key}'
     return root_validator(pre=False, allow_reuse=True)(oneof_setter)
 
 
@@ -121,14 +121,13 @@ def protobuf_to_pydantic_model(
         if isinstance(protobuf_model, Descriptor)
         else getattr(protobuf_model, 'DESCRIPTOR', None)
     )
-    if desc:
-        model_name = desc.name
-        protobuf_fields = desc.fields
-    else:
+    if not desc:
         raise ValueError(
             f'protobuf_model is of type {type(protobuf_model)} and has no attribute "DESCRIPTOR"'
         )
 
+    model_name = desc.name
+    protobuf_fields = desc.fields
     if model_name in vars(PROTO_TO_PYDANTIC_MODELS):
         return PROTO_TO_PYDANTIC_MODELS.__getattribute__(model_name)
 
@@ -146,12 +145,10 @@ def protobuf_to_pydantic_model(
             oneof_fields[f.containing_oneof.name].append(field_name)
 
         if field_type is Enum:
-            # Proto Field Type: enum
-            enum_dict = {}
-
-            for enum_field in f.enum_type.values:
-                enum_dict[enum_field.name] = enum_field.number
-
+            enum_dict = {
+                enum_field.name: enum_field.number
+                for enum_field in f.enum_type.values
+            }
             field_type = Enum(f.enum_type.name, enum_dict)
 
         if f.message_type:
@@ -163,15 +160,13 @@ def protobuf_to_pydantic_model(
                 # Proto Field Type: google.protobuf.Timestamp
                 field_type = datetime
                 default_factory = datetime.now
+            elif f.message_type.name == model_name:
+                # Self-referencing models
+                field_type = model_name
             else:
-                # Proto field type: Proto message defined in jina.proto
-                if f.message_type.name == model_name:
-                    # Self-referencing models
-                    field_type = model_name
-                else:
-                    # This field_type itself a Pydantic model
-                    field_type = protobuf_to_pydantic_model(f.message_type)
-                    PROTO_TO_PYDANTIC_MODELS.model_name = field_type
+                # This field_type itself a Pydantic model
+                field_type = protobuf_to_pydantic_model(f.message_type)
+                PROTO_TO_PYDANTIC_MODELS.model_name = field_type
 
         if f.label == FieldDescriptor.LABEL_REPEATED:
             field_type = List[field_type]

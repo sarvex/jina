@@ -121,10 +121,7 @@ def _docker_run(
             paths = p.split(':')
             local_path = paths[0]
             Path(os.path.abspath(local_path)).mkdir(parents=True, exist_ok=True)
-            if len(paths) == 2:
-                container_path = paths[1]
-            else:
-                container_path = '/' + os.path.basename(p)
+            container_path = paths[1] if len(paths) == 2 else f'/{os.path.basename(p)}'
             _volumes[os.path.abspath(local_path)] = {
                 'bind': container_path,
                 'mode': 'rw',
@@ -150,7 +147,7 @@ def _docker_run(
                 'The image may run with poor performance or fail if run via emulation.'
             )
     docker_kwargs = args.docker_kwargs or {}
-    container = client.containers.run(
+    return client.containers.run(
         uses_img,
         _args,
         detach=True,
@@ -165,7 +162,6 @@ def _docker_run(
         environment=envs,
         **docker_kwargs,
     )
-    return container
 
 
 def run(
@@ -293,10 +289,10 @@ def run(
         client.close()
         if not is_started.is_set():
             logger.error(
-                f' Process terminated, the container fails to start, check the arguments or entrypoint'
+                ' Process terminated, the container fails to start, check the arguments or entrypoint'
             )
         is_shutdown.set()
-        logger.debug(f'process terminated')
+        logger.debug('process terminated')
 
 
 class ContainerPod(BasePod):
@@ -341,11 +337,7 @@ class ContainerPod(BasePod):
             else:
                 ctrl_host = self.args.host
 
-            if self.args.pod_role == PodRoleType.GATEWAY:
-                ctrl_address = f'{ctrl_host}:{self.args.port[0]}'
-            else:
-                ctrl_address = f'{ctrl_host}:{self.args.port[0]}'
-
+            ctrl_address = f'{ctrl_host}:{self.args.port[0]}'
             net_node, runtime_ctrl_address = self._get_network_for_dind_linux(
                 client, ctrl_address
             )
@@ -365,12 +357,8 @@ class ContainerPod(BasePod):
         if sys.platform in ('linux', 'linux2') and 'microsoft' not in uname().release:
             net_mode = 'host'
             try:
-                bridge_network = client.networks.get('bridge')
-                if bridge_network:
-                    if self.args.pod_role == PodRoleType.GATEWAY:
-                        runtime_ctrl_address = f'{bridge_network.attrs["IPAM"]["Config"][0]["Gateway"]}:{self.args.port[0]}'
-                    else:
-                        runtime_ctrl_address = f'{bridge_network.attrs["IPAM"]["Config"][0]["Gateway"]}:{self.args.port[0]}'
+                if bridge_network := client.networks.get('bridge'):
+                    runtime_ctrl_address = f'{bridge_network.attrs["IPAM"]["Config"][0]["Gateway"]}:{self.args.port[0]}'
             except Exception as ex:
                 self.logger.warning(
                     f'Unable to set control address from "bridge" network: {ex!r}'
@@ -424,9 +412,9 @@ class ContainerPod(BasePod):
             self._container.kill(signal='SIGTERM')
         finally:
             self.is_shutdown.wait(self.args.timeout_ctrl)
-            self.logger.debug(f'terminating the runtime process')
+            self.logger.debug('terminating the runtime process')
             self.worker.terminate()
-            self.logger.debug(f'runtime process properly terminated')
+            self.logger.debug('runtime process properly terminated')
 
     def join(self, *args, **kwargs):
         """Joins the Pod.
@@ -446,6 +434,6 @@ class ContainerPod(BasePod):
                 containers = client.containers.list()
         except docker.errors.NotFound:
             pass
-        self.logger.debug(f'joining the process')
+        self.logger.debug('joining the process')
         self.worker.join(*args, **kwargs)
-        self.logger.debug(f'successfully joined the process')
+        self.logger.debug('successfully joined the process')

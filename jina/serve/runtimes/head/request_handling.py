@@ -230,9 +230,8 @@ class HeaderRequestHandler(MonitoringRequestMixin):
             )
             if issubclass(type(result), BaseException):
                 raise result
-            else:
-                response, uses_before_metadata = result
-                requests = [response]
+            response, uses_before_metadata = result
+            requests = [response]
 
         (
             worker_results,
@@ -275,7 +274,7 @@ class HeaderRequestHandler(MonitoringRequestMixin):
                 response_request, uses_after_metadata = result
         elif len(worker_results) > 1 and reduce:
             response_request = WorkerRequestHandler.reduce_requests(worker_results)
-        elif len(worker_results) > 1 and not reduce:
+        elif len(worker_results) > 1:
             # worker returned multiple responses, but the head is configured to skip reduction
             # just concatenate the docs in this case
             response_request.data.docs = WorkerRequestHandler.get_docs_from_request(
@@ -305,7 +304,7 @@ class HeaderRequestHandler(MonitoringRequestMixin):
         :param stop_event: signal to indicate if an early termination of the task is required for graceful teardown.
         :param deployment: deployment name that need to be warmed up.
         """
-        self.logger.debug(f'Running HeadRuntime warmup')
+        self.logger.debug('Running HeadRuntime warmup')
 
         try:
             await connection_pool.warmup(deployment=deployment, stop_event=stop_event)
@@ -320,12 +319,11 @@ class HeaderRequestHandler(MonitoringRequestMixin):
         if self.warmup_task:
             try:
                 if not self.warmup_task.done():
-                    self.logger.debug(f'Cancelling warmup task.')
+                    self.logger.debug('Cancelling warmup task.')
                     self.warmup_stop_event.set()  # this event is useless if simply cancel
                     self.warmup_task.cancel()
             except Exception as ex:
                 self.logger.debug(f'exception during warmup task cancellation: {ex}')
-                pass
 
     async def close(self):
         """Close the data request handler, by closing the executor and the batch queues."""
@@ -390,10 +388,7 @@ class HeaderRequestHandler(MonitoringRequestMixin):
             return self._handle_internalnetworkerror(
                 err=err, context=context, response=Response()
             )
-        except (
-            RuntimeError,
-            Exception,
-        ) as ex:  # some other error, keep streaming going just add error info
+        except Exception as ex:
             self.logger.error(
                 f'{ex!r}' + f'\n add "--quiet-error" to suppress the exception details'
                 if not self.args.quiet_error

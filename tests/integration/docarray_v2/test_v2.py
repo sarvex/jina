@@ -91,21 +91,27 @@ def test_input_response_schema_annotation():
 
 
 def test_different_output_input():
+
     class InputDoc(BaseDocument):
         img: ImageDoc
 
     class OutputDoc(BaseDocument):
         embedding: AnyTensor
 
+
+
     class MyExec(Executor):
         @requests(on='/bar')
         def bar(
-            self, docs: DocumentArray[InputDoc], **kwargs
-        ) -> DocumentArray[OutputDoc]:
-            docs_return = DocumentArray[OutputDoc](
-                [OutputDoc(embedding=np.zeros((100, 1))) for _ in range(len(docs))]
+                    self, docs: DocumentArray[InputDoc], **kwargs
+                ) -> DocumentArray[OutputDoc]:
+            return DocumentArray[OutputDoc](
+                [
+                    OutputDoc(embedding=np.zeros((100, 1)))
+                    for _ in range(len(docs))
+                ]
             )
-            return docs_return
+
 
     with Flow().add(uses=MyExec) as f:
         docs = f.post(
@@ -118,21 +124,27 @@ def test_different_output_input():
 
 
 def test_deployments():
+
     class InputDoc(BaseDocument):
         img: ImageDoc
 
     class OutputDoc(BaseDocument):
         embedding: AnyTensor
 
+
+
     class MyExec(Executor):
         @requests(on='/bar')
         def bar(
-            self, docs: DocumentArray[InputDoc], **kwargs
-        ) -> DocumentArray[OutputDoc]:
-            docs_return = DocumentArray[OutputDoc](
-                [OutputDoc(embedding=np.zeros((100, 1))) for _ in range(len(docs))]
+                    self, docs: DocumentArray[InputDoc], **kwargs
+                ) -> DocumentArray[OutputDoc]:
+            return DocumentArray[OutputDoc](
+                [
+                    OutputDoc(embedding=np.zeros((100, 1)))
+                    for _ in range(len(docs))
+                ]
             )
-            return docs_return
+
 
     with Deployment(uses=MyExec) as dep:
         docs = dep.post(

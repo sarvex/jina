@@ -54,8 +54,6 @@ async def create_executor_deployment_and_wait_ready(
         except Exception as e:
             # some objects are not successfully created since they exist from previous files
             logger.info(f'Did not create resource from {file} for pod due to {e} ')
-            pass
-
     # wait for all the pods to be up
     expected_deployments = sum(deployment_replicas_expected.values())
     while True:
@@ -72,8 +70,8 @@ async def create_executor_deployment_and_wait_ready(
 
     # wait for all the pods to be up
     resp = app_client.list_namespaced_deployment(namespace=namespace)
-    deployment_names = set([item.metadata.name for item in resp.items])
-    while len(deployment_names) > 0:
+    deployment_names = {item.metadata.name for item in resp.items}
+    while deployment_names:
         deployments_ready = []
         for deployment_name in deployment_names:
             api_response = app_client.read_namespaced_deployment(
@@ -157,12 +155,12 @@ async def test_deployment_serve_k8s(
         service_name = 'svc/test-executor' if shards == 1 else 'svc/test-executor-head'
 
         with shell_portforward(
-            k8s_cluster._cluster.kubectl_path,
-            service_name,
-            port,
-            port,
-            namespace,
-        ):
+                    k8s_cluster._cluster.kubectl_path,
+                    service_name,
+                    port,
+                    port,
+                    namespace,
+                ):
             client = Client(port=port, asyncio=True)
 
             # test with streaming
@@ -186,7 +184,7 @@ async def test_deployment_serve_k8s(
 
             # port forwarding will always hit the same replica, therefore, with no head, there is no proper
             # load balancing mechanism with just port forwarding
-            if not (shards == 1 and replicas == 2):
+            if shards != 1 or replicas != 2:
                 assert len(visited) == shards * replicas
 
     except Exception as exc:

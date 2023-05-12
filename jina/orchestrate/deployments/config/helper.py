@@ -61,10 +61,7 @@ def get_base_executor_version():
         from jina import __version__
         url = 'https://registry.hub.docker.com/v2/repositories/jinaai/jina/tags'
         result: Dict = requests.get(url, params={'name': __version__}).json()
-        if result.get('count', 0) > 0:
-            return __version__
-        else:
-            return 'master'
+        return __version__ if result.get('count', 0) > 0 else 'master'
     except:
         return 'master'
 

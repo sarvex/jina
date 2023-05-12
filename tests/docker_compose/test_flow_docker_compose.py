@@ -23,7 +23,7 @@ async def run_test(flow, endpoint, num_docs=10, request_size=10):
         port=flow.port,
         asyncio=True,
     )
-    client_kwargs.update(flow._common_kwargs)
+    client_kwargs |= flow._common_kwargs
 
     client = Client(**client_kwargs)
     client.show_progress = True
@@ -41,7 +41,9 @@ async def run_test(flow, endpoint, num_docs=10, request_size=10):
 
 @pytest.fixture()
 def flow_with_sharding(docker_images, polling):
-    flow = Flow(name='test-flow-with-sharding', port=9090, protocol='grpc').add(
+    return Flow(
+        name='test-flow-with-sharding', port=9090, protocol='grpc'
+    ).add(
         name='test_executor_sharding',
         shards=2,
         replicas=2,
@@ -49,22 +51,20 @@ def flow_with_sharding(docker_images, polling):
         uses_after=f'docker://{docker_images[1]}',
         polling=polling,
     )
-    return flow
 
 
 @pytest.fixture
 def flow_configmap(docker_images):
-    flow = Flow(name='k8s-flow-configmap', port=9091, protocol='http').add(
+    return Flow(name='k8s-flow-configmap', port=9091, protocol='http').add(
         name='test_executor_configmap',
         uses=f'docker://{docker_images[0]}',
         env={'k1': 'v1', 'k2': 'v2'},
     )
-    return flow
 
 
 @pytest.fixture
 def flow_with_needs(docker_images):
-    flow = (
+    return (
         Flow(
             name='test-flow-with-needs',
             port=9092,
@@ -92,7 +92,6 @@ def flow_with_needs(docker_images):
             disable_reduce=True,
         )
     )
-    return flow
 
 
 @pytest.mark.asyncio
@@ -196,20 +195,16 @@ async def test_flow_with_sharding(flow_with_sharding, polling, tmpdir):
             assert set(doc.tags['shard_id']) == {0, 1}
             assert doc.tags['parallel'] == [2, 2]
             assert doc.tags['shards'] == [2, 2]
-            for executor in doc.tags['traversed-executors']:
-                if executor in runtimes_to_visit:
-                    runtimes_to_visit.remove(executor)
         else:
             assert len(set(doc.tags['traversed-executors'])) == 1
             assert len(set(doc.tags['shard_id'])) == 1
             assert 0 in set(doc.tags['shard_id']) or 1 in set(doc.tags['shard_id'])
             assert doc.tags['parallel'] == [2]
             assert doc.tags['shards'] == [2]
-            for executor in doc.tags['traversed-executors']:
-                if executor in runtimes_to_visit:
-                    runtimes_to_visit.remove(executor)
-
-    assert len(runtimes_to_visit) == 0
+        for executor in doc.tags['traversed-executors']:
+            if executor in runtimes_to_visit:
+                runtimes_to_visit.remove(executor)
+    assert not runtimes_to_visit
 
 
 @pytest.mark.timeout(3600)

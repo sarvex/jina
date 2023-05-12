@@ -176,9 +176,9 @@ async def test_gateway_stream_executor_error(port_generator, return_results):
         assert error.executor == 'TestExecutor'
 
         if return_results:
-            assert all([isinstance(response, Request) for response in responses])
+            assert all(isinstance(response, Request) for response in responses)
         else:
-            assert all([isinstance(response, DocumentArray) for response in responses])
+            assert all(isinstance(response, DocumentArray) for response in responses)
             for index, result_da in enumerate(responses):
                 assert da[index] == result_da[0]
 

@@ -137,9 +137,9 @@ class KindClusterWrapper:
         self, images: List[str], image_tag_map: Dict[str, str]
     ) -> None:
         for image in images:
-            full_image_name = image + ':' + image_tag_map[image]
+            full_image_name = f'{image}:{image_tag_map[image]}'
             if full_image_name not in self._loaded_images:
-                if image != 'alpine' and image != 'jinaai/jina':
+                if image not in ['alpine', 'jinaai/jina']:
                     build_docker_image(image, image_tag_map)
                 self._cluster.load_docker_image(full_image_name)
                 self._loaded_images.add(full_image_name)
@@ -180,7 +180,7 @@ def image_name_tag_map() -> Dict[str, str]:
 
 def build_docker_image(image_name: str, image_name_tag_map: Dict[str, str]) -> str:
     logger = JinaLogger('kubernetes-testing')
-    image_tag = image_name + ':' + image_name_tag_map[image_name]
+    image_tag = f'{image_name}:{image_name_tag_map[image_name]}'
     image, build_logs = client.images.build(
         path=os.path.join(cur_dir, image_name), tag=image_tag
     )
@@ -218,10 +218,10 @@ def docker_images(
 ) -> List[str]:
     image_names: List[str] = request.param
     k8s_cluster.load_docker_images(image_names, image_name_tag_map)
-    images = [
-        image_name + ':' + image_name_tag_map[image_name] for image_name in image_names
+    return [
+        f'{image_name}:{image_name_tag_map[image_name]}'
+        for image_name in image_names
     ]
-    return images
 
 
 @contextlib.contextmanager

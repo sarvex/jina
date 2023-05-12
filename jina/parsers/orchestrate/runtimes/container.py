@@ -47,7 +47,7 @@ Note,
         gp.add_argument(
             '--gpus',
             type=str,
-            help=f'''
+            help='''
     This argument allows dockerized Jina Executors to discover local gpu devices.
     
     Note, 
@@ -63,5 +63,5 @@ Note,
             '--disable-auto-volume',
             action='store_true',
             default=False,
-            help=f'Do not automatically mount a volume for dockerized Executors.',
+            help='Do not automatically mount a volume for dockerized Executors.',
         )

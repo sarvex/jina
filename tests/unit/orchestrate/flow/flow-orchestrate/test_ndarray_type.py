@@ -42,13 +42,12 @@ class NparrayInEec(Executor):
 
 @pytest.fixture()
 def linear_flow():
-    f = (
+    return (
         Flow()
         .add(uses=MyExec, output_array_type='numpy')
         .add(uses=NparrayInEec, output_array_type='list')
         .add(uses=ListInExec)
     )
-    return f
 
 
 def test_array_conversion(linear_flow):

@@ -80,15 +80,8 @@ def get_template_yamls(
         port_monitoring = GrpcConnectionPool.K8S_PORT_MONITORING
 
     # we cast port to list of ports and protocol to list of protocols
-    if not isinstance(port, list):
-        ports = [port]
-    else:
-        ports = port
-    if not isinstance(protocol, list):
-        protocols = [protocol]
-    else:
-        protocols = protocol
-
+    ports = [port] if not isinstance(port, list) else port
+    protocols = [protocol] if not isinstance(protocol, list) else protocol
     if timeout_ready == -1:
         warnings.warn(
             'timeout_ready=-1 is not supported, setting timeout_ready to 10 minutes'
@@ -266,8 +259,7 @@ def get_cli_params(
                 value = value.replace('\'', '').replace('"', '\\"')
                 cli_args.append(f'"--{cli_attribute}", "{value}"')
 
-    cli_string = ', '.join(cli_args)
-    return cli_string
+    return ', '.join(cli_args)
 
 
 def dictionary_to_cli_param(dictionary) -> str:

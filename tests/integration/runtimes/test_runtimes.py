@@ -374,13 +374,10 @@ async def test_runtimes_replicas(port_generator):
 @pytest.mark.asyncio
 async def test_runtimes_with_executor(port_generator):
     graph_description = '{"start-gateway": ["pod0"], "pod0": ["end-gateway"]}'
-    runtime_processes = []
-
     uses_before_port, uses_before_process = await _create_worker(
         'pod0', port_generator, type='uses_before', executor='NameChangeExecutor'
     )
-    runtime_processes.append(uses_before_process)
-
+    runtime_processes = [uses_before_process]
     uses_after_port, uses_after_process = await _create_worker(
         'pod0', port_generator, type='uses_after', executor='NameChangeExecutor'
     )
@@ -408,7 +405,7 @@ async def test_runtimes_with_executor(port_generator):
         args=(
             head_port,
             connection_list_dict,
-            f'pod0/head',
+            'pod0/head',
             'ALL',
             f'127.0.0.1:{uses_before_port}',
             f'127.0.0.1:{uses_after_port}',
@@ -469,7 +466,7 @@ async def test_runtimes_gateway_worker_direct_connection(port_generator):
 
     # create the shards
     worker_process = multiprocessing.Process(
-        target=_create_worker_runtime, args=(worker_port, f'pod0')
+        target=_create_worker_runtime, args=(worker_port, 'pod0')
     )
     worker_process.start()
 
@@ -821,6 +818,7 @@ async def test_head_runtime_with_offline_shards(port_generator):
 
 
 def test_runtime_slow_processing_readiness(port_generator):
+
     class SlowProcessingExecutor(Executor):
         @requests
         def foo(self, **kwargs):
@@ -830,7 +828,7 @@ def test_runtime_slow_processing_readiness(port_generator):
     # create a single worker runtime
     worker_process = multiprocessing.Process(
         target=_create_worker_runtime,
-        args=(worker_port, f'pod0', 'SlowProcessingExecutor'),
+        args=(worker_port, 'pod0', 'SlowProcessingExecutor'),
     )
     try:
         worker_process.start()
@@ -912,7 +910,7 @@ def test_grpc_server_and_channel_args(monkeypatch, mocker, runtime):
     elif runtime == 'head':
         args = _generate_pod_args()
         args.polling = PollingType.ANY
-        connection_list_dict = {0: [f'fake_ip:8080']}
+        connection_list_dict = {0: ['fake_ip:8080']}
         args.connection_list = json.dumps(connection_list_dict)
         args.grpc_server_options = {"grpc.max_send_message_length": 10000}
         args.grpc_channel_options = {"grpc.keepalive_time_ms": 9999}

@@ -282,11 +282,10 @@ class GatewayStreamer:
 
         :return: Returns an instance of `GatewayStreamer`
         """
-        if 'JINA_STREAMER_ARGS' in os.environ:
-            args_dict = json.loads(os.environ['JINA_STREAMER_ARGS'])
-            return GatewayStreamer(**args_dict)
-        else:
+        if 'JINA_STREAMER_ARGS' not in os.environ:
             raise OSError('JINA_STREAMER_ARGS environment variable is not set')
+        args_dict = json.loads(os.environ['JINA_STREAMER_ARGS'])
+        return GatewayStreamer(**args_dict)
 
     @staticmethod
     def _set_env_streamer_args(**kwargs):
@@ -298,21 +297,20 @@ class GatewayStreamer:
         eastablishing a brand new gRPC channel.
         :param stop_event: signal to indicate if an early termination of the task is required for graceful teardown.
         """
-        self.logger.debug(f'Running GatewayRuntime warmup')
-        deployments = {key for key in self._executor_addresses.keys()}
+        self.logger.debug('Running GatewayRuntime warmup')
+        deployments = set(self._executor_addresses.keys())
 
         try:
             deployment_warmup_tasks = []
             try:
-                for deployment in deployments:
-                    deployment_warmup_tasks.append(
-                        asyncio.create_task(
-                            self._connection_pool.warmup(
-                                deployment=deployment, stop_event=stop_event
-                            )
+                deployment_warmup_tasks.extend(
+                    asyncio.create_task(
+                        self._connection_pool.warmup(
+                            deployment=deployment, stop_event=stop_event
                         )
                     )
-
+                    for deployment in deployments
+                )
                 await asyncio.gather(*deployment_warmup_tasks, return_exceptions=True)
             except asyncio.CancelledError:
                 if deployment_warmup_tasks:

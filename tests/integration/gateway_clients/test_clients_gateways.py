@@ -123,8 +123,8 @@ class DummyMockConnectionPool:
         new_docs = DocumentArray()
         docs = request.docs
         for doc in docs:
-            clientid = doc.text[0:7]
-            new_doc = Document(id=doc.id, text=doc.text + f'-{clientid}-{deployment}')
+            clientid = doc.text[:7]
+            new_doc = Document(id=doc.id, text=f'{doc.text}-{clientid}-{deployment}')
             new_docs.append(new_doc)
 
         response_msg.data.docs = new_docs
@@ -346,12 +346,10 @@ def test_grpc_gateway_runtime_handle_messages_bifurcation(
         assert len(responses) > 0
         # reducing is supposed to happen in the deployments, in the test it will get a single doc in non deterministic order
         assert len(responses[0].docs) == 1
-        assert (
-            responses[0].docs[0].text
-            == f'client{client_id}-Request-client{client_id}-deployment0-client{client_id}-deployment2-client{client_id}-deployment3'
-            or responses[0].docs[0].text
-            == f'client{client_id}-Request-client{client_id}-deployment4-client{client_id}-deployment5'
-        )
+        assert responses[0].docs[0].text in [
+            f'client{client_id}-Request-client{client_id}-deployment0-client{client_id}-deployment2-client{client_id}-deployment3',
+            f'client{client_id}-Request-client{client_id}-deployment4-client{client_id}-deployment5',
+        ]
 
     p = multiprocessing.Process(
         target=create_runtime,

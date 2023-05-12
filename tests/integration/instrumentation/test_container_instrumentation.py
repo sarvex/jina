@@ -29,7 +29,7 @@ def test_docker_instrumentation(
     with f:
         from docarray import DocumentArray
 
-        f.post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(), continue_on_error=True)
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
         time.sleep(3)

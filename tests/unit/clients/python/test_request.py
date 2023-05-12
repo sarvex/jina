@@ -121,7 +121,7 @@ def test_request_generate_docs():
 def test_request_generate_dict():
     def random_docs(num_docs):
         for j in range(1, num_docs + 1):
-            doc = {
+            yield {
                 'id': f'root {j}',
                 'text': f'i\'m dummy doc {j}',
                 'offset': 1000,
@@ -131,7 +131,6 @@ def test_request_generate_dict():
                     {'id': 'c2', 'text': f'i\'m chunk 2', 'modality': 'image'},
                 ],
             }
-            yield doc
 
     req = request_generator('', data=random_docs(100), request_size=100)
 
@@ -154,7 +153,7 @@ def test_request_generate_dict_str():
 
     def random_docs(num_docs):
         for j in range(1, num_docs + 1):
-            doc = {
+            yield {
                 'id': f'root {j}',
                 'text': f'i\'m dummy doc {j}',
                 'offset': 1000,
@@ -164,7 +163,6 @@ def test_request_generate_dict_str():
                     {'id': 'c2', 'text': f'i\'m chunk 2', 'modality': 'image'},
                 ],
             }
-            yield doc
 
     req = request_generator('', data=random_docs(100), request_size=100)
 
@@ -202,8 +200,7 @@ def test_request_generate_numpy_arrays_iterator():
     input_array = np.random.random([10, 10])
 
     def generator():
-        for array in input_array:
-            yield array
+        yield from input_array
 
     req = request_generator('', data=generator(), request_size=5)
 

@@ -10,8 +10,6 @@ def _get_run_args(print_args: bool = True):
 
     console = get_rich_console()
 
-    silent_print = {'help', 'hub', 'export', 'auth', 'cloud', 'ping'}
-
     parser = get_main_parser()
     if len(sys.argv) > 1:
         from argparse import _StoreAction, _StoreTrueAction
@@ -26,6 +24,8 @@ def _get_run_args(print_args: bool = True):
 
             unknown = list(filter(lambda x: x.startswith('--'), unknown))
             warn_unknown_args(unknown)
+
+        silent_print = {'help', 'hub', 'export', 'auth', 'cloud', 'ping'}
 
         if args.cli not in silent_print and print_args:
             from jina.constants import __resources_path__
@@ -53,7 +53,7 @@ def _get_run_args(print_args: bool = True):
                 param = k.replace('_', '-')
                 value = str(v)
 
-                if not default_args.get(k, None) == v:
+                if default_args.get(k, None) != v:
                     value = f'[b]{value}[/]'
 
                 param_str.add_row(param, value)
@@ -106,7 +106,7 @@ def _try_plugin_command():
         return shutil.which(cmd) is not None
 
     subcommand = argv[1]
-    cmd = 'jina-' + subcommand
+    cmd = f'jina-{subcommand}'
     if _cmd_exists(cmd):
         subprocess.run([cmd] + argv[2:])
         return True

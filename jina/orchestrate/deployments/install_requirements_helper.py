@@ -108,12 +108,12 @@ def _expand_env_variables(line: str) -> str:
     :return: line
     """
     for env_var, var_name in ENV_VAR_RE.findall(line):
-        value = os.getenv(var_name)
-        if not value:
+        if value := os.getenv(var_name):
+            line = line.replace(env_var, value)
+        else:
             raise Exception(
                 f'The given requirements.txt require environment variables `{var_name}` does not exist!'
             )
-        line = line.replace(env_var, value)
     return line
 
 
@@ -126,8 +126,7 @@ def _get_install_options(requirements_file: 'Path', excludes: Tuple[str] = ('jin
             if (not req) or req.startswith('#'):
                 continue
             elif req.startswith('-'):
-                for index, item in enumerate(req.split(' ')):
-                    install_options.append(_expand_env_variables(item))
+                install_options.extend(_expand_env_variables(item) for item in req.split(' '))
             else:
                 expand_req = _expand_env_variables(req)
                 req_spec = _parse_requirement(expand_req)

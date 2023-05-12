@@ -157,8 +157,8 @@ def get_fastapi_app(
 
     @app.websocket('/')
     async def websocket_endpoint(
-            websocket: WebSocket, response: Response
-    ):  # 'response' is a FastAPI response, not a Jina response
+                websocket: WebSocket, response: Response
+        ):  # 'response' is a FastAPI response, not a Jina response
         await manager.connect(websocket)
 
         async def req_iter():
@@ -166,18 +166,17 @@ def get_fastapi_app(
                 if isinstance(request, dict):
                     if request == {}:
                         break
-                    else:
-                        # NOTE: Helps in converting camelCase to snake_case
-                        req_generator_input = JinaEndpointRequestModel(**request).dict()
-                        req_generator_input['data_type'] = DataInputType.DICT
-                        if request['data'] is not None and 'docs' in request['data']:
-                            req_generator_input['data'] = req_generator_input['data'][
-                                'docs'
-                            ]
+                    # NOTE: Helps in converting camelCase to snake_case
+                    req_generator_input = JinaEndpointRequestModel(**request).dict()
+                    req_generator_input['data_type'] = DataInputType.DICT
+                    if request['data'] is not None and 'docs' in request['data']:
+                        req_generator_input['data'] = req_generator_input['data'][
+                            'docs'
+                        ]
 
-                        # you can't do `yield from` inside an async function
-                        for data_request in request_generator(**req_generator_input):
-                            yield data_request
+                    # you can't do `yield from` inside an async function
+                    for data_request in request_generator(**req_generator_input):
+                        yield data_request
                 elif isinstance(request, bytes):
                     if request == bytes(True):
                         break

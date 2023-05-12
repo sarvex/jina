@@ -41,11 +41,7 @@ def avoid_concurrent_lock_cls(cls):
                 )
 
             if self.__class__ == cls:
-                with ImportExtensions(
-                    required=False,
-                    help_text=f'FileLock is needed to guarantee non-concurrent initialization of replicas in the '
-                    f'same machine.',
-                ):
+                with ImportExtensions(required=False, help_text='FileLock is needed to guarantee non-concurrent initialization of replicas in the same machine.'):
                     import filelock
 
                     locks_root = _get_locks_root()
@@ -245,10 +241,7 @@ def requests(
             # this is needed to make this decorator work in combination with `@requests`
             return self.fn(*args, **kwargs)
 
-    if func:
-        return FunctionMapper(func)
-    else:
-        return FunctionMapper
+    return FunctionMapper(func) if func else FunctionMapper
 
 
 def dynamic_batching(
@@ -338,10 +331,7 @@ def dynamic_batching(
             # this is needed to make this decorator work in combination with `@requests`
             return self.fn(*args, **kwargs)
 
-    if func:
-        return DynamicBatchingDecorator(func)
-    else:
-        return DynamicBatchingDecorator
+    return DynamicBatchingDecorator(func) if func else DynamicBatchingDecorator
 
 
 def monitor(

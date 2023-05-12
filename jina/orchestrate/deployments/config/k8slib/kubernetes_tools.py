@@ -83,10 +83,12 @@ def _get_deployment_with_device_plugins(deployment: Dict, params: Dict) -> Dict:
 
 def _get_deployment_with_env_secret(deployment: Dict, params: Dict) -> Dict:
     for k,v in params['env_from_secret'].items():
-        env_var = {}
-        env_var['name'] = k
-        env_var['valueFrom'] = {'secretKeyRef': {'name': v['name'], 'key': v['key']}}
-            
+        env_var = {
+            'name': k,
+            'valueFrom': {
+                'secretKeyRef': {'name': v['name'], 'key': v['key']}
+            },
+        }
         deployment['spec']['template']['spec']['containers'][0]['env'].append(env_var)
 
     return deployment

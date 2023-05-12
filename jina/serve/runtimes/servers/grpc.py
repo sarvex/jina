@@ -102,7 +102,7 @@ class GRPCServer(BaseServer):
             self.ssl_keyfile != self.ssl_certfile
         ):  # if we have only ssl_keyfile and not ssl_certfile or vice versa
             raise ValueError(
-                f"you can't pass a ssl_keyfile without a ssl_certfile and vice versa"
+                "you can't pass a ssl_keyfile without a ssl_certfile and vice versa"
             )
         else:
             self.server.add_insecure_port(bind_addr)

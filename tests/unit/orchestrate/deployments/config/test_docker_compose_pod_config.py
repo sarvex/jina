@@ -21,7 +21,7 @@ def namespace_equal(
     if n1 is None and n2 is None:
         return True
     for attr in filter(lambda x: x not in skip_attr and not x.startswith('_'), dir(n1)):
-        if not getattr(n1, attr) == getattr(n2, attr):
+        if getattr(n1, attr) != getattr(n2, attr):
             print(f' differ in {attr}')
             return False
     return True
@@ -134,15 +134,6 @@ def test_parse_args(
                         f'executor-{shard_id}-rep-{replica}:8081'
                     )
 
-    else:
-        if replicas == 1:
-            candidate_connection_list = {'0': [f'executor:8081']}
-        else:
-            candidate_connection_list = {'0': []}
-            for replica in range(replicas):  # TODO
-                candidate_connection_list['0'].append(f'executor-rep-{replica}:8081')
-
-    if shards > 1:
         assert deployment_config.services_args[
             'head_service'
         ].connection_list == json.dumps(candidate_connection_list)
@@ -206,6 +197,13 @@ def test_parse_args(
             assert deployment_config.services_args['uses_after_service'].shard_id == 0
             assert deployment_config.services_args['uses_after_service'].replicas == 1
 
+    elif replicas == 1:
+        candidate_connection_list = {'0': ['executor:8081']}
+    else:
+        candidate_connection_list = {'0': []}
+        for replica in range(replicas):  # TODO
+            candidate_connection_list['0'].append(f'executor-rep-{replica}:8081')
+
     for i, depl_arg in enumerate(deployment_config.services_args['services']):
         import copy
 
@@ -266,7 +264,7 @@ def test_parse_args_custom_executor(shards: int, replicas: int):
         assert deployment_config.services_args['head_service'].uses_after is None
         assert (
             deployment_config.services_args['head_service'].uses_after_address
-            == f'executor-uses-after:8081'
+            == 'executor-uses-after:8081'
         )
 
         assert deployment_config.services_args['head_service'].uses_before is None
@@ -545,7 +543,7 @@ def test_docker_compose_yaml_regular_deployment(
         else:
             if shards == 1:
                 if replicas == 1:
-                    candidate_connection_list = {'0': [f'executor:8081']}
+                    candidate_connection_list = {'0': ['executor:8081']}
                 else:
                     candidate_connection_list = {'0': []}
                     for replica in range(replicas):

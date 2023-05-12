@@ -59,7 +59,7 @@ def test_host_unpacking_port(protocol, port):
 
 
 def test_delete_slash_host():
-    host = f'http://localhost/'
+    host = 'http://localhost/'
 
     c = Client(host=host)
 
@@ -79,7 +79,7 @@ def test_host_unpacking_basic():
 
 def test_host_unpacking_duplicate():
     with pytest.raises(ValueError):
-        Client(host=f'http://localhost:1234', port=1234)
+        Client(host='http://localhost:1234', port=1234)
 
 
 def test_log_config_arg():

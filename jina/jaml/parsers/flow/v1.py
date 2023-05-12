@@ -99,8 +99,7 @@ class V1Parser(VersionedYAMLParser):
                     method = p_deployment_attr.get('method', 'add')
                     # support methods: add, needs, inspect
                     getattr(obj, method)(**p_deployment_attr, copy_flow=False)
-        gateway = data.get(GATEWAY_NAME, {})
-        if gateway:
+        if gateway := data.get(GATEWAY_NAME, {}):
             gateway_attr = {kk: expand_env_var(vv) for kk, vv in gateway.items()}
             obj.config_gateway(**gateway_attr, copy_flow=False)
         return obj
@@ -137,7 +136,7 @@ class V1Parser(VersionedYAMLParser):
 
             non_default_kw = ArgNamespace.get_non_defaults_args(v.args, parser)
 
-            kwargs.update(non_default_kw)
+            kwargs |= non_default_kw
 
             for t in _get_taboo(parser):
                 if t in kwargs:
@@ -151,7 +150,7 @@ class V1Parser(VersionedYAMLParser):
         non_default_kw = ArgNamespace.get_non_defaults_args(
             data.gateway_args, gateway_parser
         )
-        gateway_kwargs.update(non_default_kw)
+        gateway_kwargs |= non_default_kw
         for t in _get_taboo(gateway_parser):
             if t in gateway_kwargs:
                 gateway_kwargs.pop(t)

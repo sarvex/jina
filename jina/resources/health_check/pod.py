@@ -5,12 +5,10 @@ def check_health_pod(addr: str):
     """
     from jina.serve.runtimes.servers import BaseServer
 
-    is_ready = BaseServer.is_ready(addr)
-
-    if not is_ready:
+    if is_ready := BaseServer.is_ready(addr):
+        print('The Pod is healthy')
+    else:
         raise Exception('Pod is unhealthy')
-
-    print('The Pod is healthy')
 
 
 if __name__ == '__main__':

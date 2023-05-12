@@ -135,7 +135,7 @@ class ProgressBar(Progress):
 
         columns = columns or [
             SpinnerColumn(),
-            _OnDoneColumn(f'DONE', description, 'progress.description'),
+            _OnDoneColumn('DONE', description, 'progress.description'),
             BarColumn(complete_style='green', finished_style='yellow'),
             TimeElapsedColumn(),
             '[progress.percentage]{task.percentage:>3.0f}%',
@@ -217,15 +217,14 @@ class _OnDoneColumn(ProgressColumn):
         self.style = style
 
     def render(self, task: 'Task') -> Text:
-        if task.finished_time:
-            if callable(self.text_on_done_format):
-                return Text(self.text_on_done_format(task), style=self.style)
-            else:
-                return Text(
-                    self.text_on_done_format.format(task=task), style=self.style
-                )
-        else:
+        if not task.finished_time:
             return Text(self.text_init_format.format(task=task), style=self.style)
+        if callable(self.text_on_done_format):
+            return Text(self.text_on_done_format(task), style=self.style)
+        else:
+            return Text(
+                self.text_on_done_format.format(task=task), style=self.style
+            )
 
 
 class TimeContext:
@@ -259,7 +258,7 @@ class TimeContext:
 
     def _enter_msg(self):
         if self._logger:
-            self._logger.info(self.task_name + '...')
+            self._logger.info(f'{self.task_name}...')
         else:
             print(self.task_name, end=' ...\t', flush=True)
 

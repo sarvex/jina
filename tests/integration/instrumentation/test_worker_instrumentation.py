@@ -14,7 +14,7 @@ def test_span_order(jaeger_port, otlp_collector, otlp_receiver_port):
     with f:
         from docarray import DocumentArray
 
-        f.post(f'/search', DocumentArray.empty(), continue_on_error=True)
+        f.post('/search', DocumentArray.empty(), continue_on_error=True)
         # give some time for the tracing and metrics exporters to finish exporting.
         # the client is slow to export the data
         time.sleep(8)
@@ -36,8 +36,6 @@ def test_span_order(jaeger_port, otlp_collector, otlp_receiver_port):
                     search_request_parent_span_ids.add(ref.get('spanID', ''))
 
     assert any(
-        [
-            search_span in process_single_data_span_ids
-            for search_span in search_request_parent_span_ids
-        ]
+        search_span in process_single_data_span_ids
+        for search_span in search_request_parent_span_ids
     )
