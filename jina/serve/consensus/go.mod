@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/raft v1.3.11
 	github.com/hashicorp/raft-boltdb v0.0.0-20220329195025-15018e9b97e0
 	google.golang.org/grpc v1.47.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
